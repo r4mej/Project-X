@@ -1,0 +1,16 @@
+# Ignore environment files
+.env
+
+# Ignore cloud credentials
+*.json
+*.pem
+firebase_config.js
+
+# Ignore compiled files
+node_modules/
+__pycache__/
+dist/
+build/
+
+# Ignore logs and temporary files
+*.log
