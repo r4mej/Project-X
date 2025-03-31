@@ -1,31 +1,6 @@
 # Project-X
 Attendance Tracker 
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
-.
+
 
 ima put this here so i dont forget
 attendance-tracker/
