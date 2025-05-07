@@ -27,7 +27,9 @@ const userSchema = new mongoose.Schema({
     }]
   },
   instructorInfo: {
-    fullName: String,
+    IfirstName: String,
+    ImiddleName: String,
+    IlastName: String,
     courses: [String],
     registeredDeviceId: String
   }

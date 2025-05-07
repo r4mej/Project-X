@@ -18,7 +18,9 @@ function Signup() {
   const [program, setProgram] = useState('');
   const [faculty, setFaculty] = useState('');
 
-  const [instructorName, setInstructorName] = useState('');
+  const [IfirstName, setIFirstName] = useState('');
+  const [ImiddleName, setIMiddleName] = useState('');
+  const [IlastName, setILastName] = useState('');
   const [courses, setCourses] = useState('');
 
   const handleSignup = async () => {
@@ -31,7 +33,7 @@ function Signup() {
 
       if (role === 'instructor') {
         body.instructorInfo = {
-          fullName: instructorName,
+          IfirstName, ImiddleName, IlastName,
           courses: courses.split(',').map(c => c.trim())
         };
       }
@@ -70,12 +72,14 @@ function Signup() {
 
       {role === 'instructor' && (
         <>
-          <input placeholder="Full Name" onChange={e => setInstructorName(e.target.value)} />
+          <input placeholder="First Name" onChange={e => setIFirstName(e.target.value)} />
+          <input placeholder="Middle Name" onChange={e => setIMiddleName(e.target.value)} />
+          <input placeholder="Last Name" onChange={e => setILastName(e.target.value)} />
           <input placeholder="Courses (comma-separated)" onChange={e => setCourses(e.target.value)} />
         </>
       )}
 
-      <button onClick={handleSignup}>Sign Up</button>
+      <button onClick={handleSignup}>Register User</button>
       <button onClick={() => navigate('/admin-dashboard')}>Go Back</button>
     </div>
   );
