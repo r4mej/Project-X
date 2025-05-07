@@ -14,7 +14,8 @@ function AdminDashboard() {
         </button>
         <li>🔒 Manage instructor devices</li>
         <li>📁 View login logs</li>
-        <li>🔐 Control encryption & access policies</li>
+        <li>Generate Reports</li>
+        
       </ul>
     </div>
   );

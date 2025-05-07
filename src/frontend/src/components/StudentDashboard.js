@@ -9,6 +9,7 @@ function StudentDashboard() {
         <li>📅 View attendance history by course</li>
         <li>📈 Track attendance trends</li>
         <li>📝 Update profile (future feature)</li>
+        <li>📷 Upload Attendance</li>
       </ul>
     </div>
   );
