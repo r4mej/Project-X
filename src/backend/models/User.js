@@ -14,7 +14,9 @@ const userSchema = new mongoose.Schema({
     reason: String
   }],
   studentInfo: {
-    fullName: String,
+    firstName: String,
+    middleName: String,
+    lastName: String,
     studentId: String,
     yearLevel: String,
     program: String,

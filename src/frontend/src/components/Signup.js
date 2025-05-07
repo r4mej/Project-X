@@ -9,7 +9,10 @@ function Signup() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('student');
 
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
+;
   const [studentId, setStudentId] = useState('');
   const [yearLevel, setYearLevel] = useState('');
   const [program, setProgram] = useState('');
@@ -23,7 +26,7 @@ function Signup() {
       let body = { username, password, role };
 
       if (role === 'student') {
-        body.studentInfo = { fullName, studentId, yearLevel, program, faculty };
+        body.studentInfo = { firstName, middleName, lastName, studentId, yearLevel, program, faculty };
       }
 
       if (role === 'instructor') {
@@ -35,7 +38,7 @@ function Signup() {
 
       await axios.post('http://localhost:5000/api/auth/signup', body);
       alert('Signup successful!');
-      navigate('/login');
+      navigate('/');
     } catch (err) {
       alert(err.response?.data?.message || 'Signup failed!');
     }
@@ -43,7 +46,7 @@ function Signup() {
 
   return (
     <div>
-      <h2>Signup</h2>
+      <h2>Register User</h2>
       <input placeholder="Username" onChange={e => setUsername(e.target.value)} />
       <input placeholder="Password" type="password" onChange={e => setPassword(e.target.value)} />
       
@@ -55,7 +58,9 @@ function Signup() {
 
       {role === 'student' && (
         <>
-          <input placeholder="Full Name" onChange={e => setFullName(e.target.value)} />
+          <input placeholder="First Name" onChange={e => setFirstName(e.target.value)} />
+          <input placeholder="Middle Name" onChange={e => setMiddleName(e.target.value)} />
+          <input placeholder="Last Name" onChange={e => setLastName(e.target.value)} />
           <input placeholder="Student ID" onChange={e => setStudentId(e.target.value)} />
           <input placeholder="Year Level" onChange={e => setYearLevel(e.target.value)} />
           <input placeholder="Program" onChange={e => setProgram(e.target.value)} />
@@ -71,7 +76,7 @@ function Signup() {
       )}
 
       <button onClick={handleSignup}>Sign Up</button>
-      <button onClick={() => navigate('/login')}>Go to Login</button>
+      <button onClick={() => navigate('/admin-dashboard')}>Go Back</button>
     </div>
   );
 }
