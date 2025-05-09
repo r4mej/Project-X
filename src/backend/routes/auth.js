@@ -1,5 +1,8 @@
 import express from 'express';
 import User from '../models/User.js';
+import Student from '../models/Student.js';
+import Instructor from '../models/Instructor.js';
+import Admin from '../models/Admin.js';
 
 const router = express.Router();
 
@@ -38,18 +41,45 @@ router.get('/hello', (req, res) => {
 });
 
 router.post('/signup', async (req, res) => {
-    const { username, password, role, studentInfo, instructorInfo } = req.body;
+  const { username, password, role, studentInfo, instructorInfo } = req.body;
+
+  const existing = await User.findOne({ username });
+  if (existing) return res.status(400).json({ message: 'Username already exists' });
+
+  let newUser;
+
+  if (role === 'student') {
+    newUser = new Student({ username, password, ...studentInfo });
+  } else if (role === 'instructor') {
+    newUser = new Instructor({ username, password, ...instructorInfo });
+  } else if (role === 'admin') {
+    newUser = new Admin({ username, password });
+  } else {
+    return res.status(400).json({ message: 'Invalid role' });
+  }
+
+  await newUser.save();
+  res.status(201).json({ message: 'User registered successfully' });
+});
   
-    const existing = await User.findOne({ username });
-    if (existing) return res.status(400).json({ message: 'Username already exists' });
+  router.post('/logout', async (req, res) => {
+    const { username } = req.body;
   
-    const newUser = new User({ username, password, role });
+    const user = await User.findOne({ username });
   
-    if (role === 'student') newUser.studentInfo = studentInfo;
-    if (role === 'instructor') newUser.instructorInfo = instructorInfo;
+    if (!user) {
+      console.warn(`Logout attempted for non-existent user: ${username}`);
+      return res.status(400).json({ message: 'User not found' });
+    }
   
-    await newUser.save();
-    res.status(201).json({ message: 'User registered successfully' });
+    user.loginAttempts.push({
+      success: true,
+      reason: 'User logged out',
+      timestamp: new Date()
+    });
+    await user.save();
+  
+    res.status(200).json({ message: 'Logout successful' });
   });
-  
+
 export default router;
