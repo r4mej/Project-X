@@ -41,7 +41,7 @@ function InstructorDashboard() {
         </button>
         {sidebarOpen && (
           <>
-            <h3>Instructor Menu</h3>
+            <h3>Menu</h3>
             <ul>
               <li onClick={() => setActiveView('qr')}>📷 Make QR Code</li>
               <li onClick={() => setActiveView('reports')}>📊 Reports</li>
