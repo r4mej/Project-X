@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const checkLoggedIn = async () => {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       console.log('[AuthProvider] Checking login status...'); // Debug log
       try {
         const token = await AsyncStorage.getItem('token');
@@ -73,6 +74,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const data = await authAPI.login(username, password);
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       console.log('[AuthProvider] Login successful:', data); // Debug log
       await AsyncStorage.setItem('token', data.token);
 =======
@@ -91,6 +93,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('[AuthProvider] Attempting logout...'); // Debug log
       await authAPI.logout();
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
       await AsyncStorage.removeItem('token');

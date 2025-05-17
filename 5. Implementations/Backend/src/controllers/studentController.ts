@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import Student, { IStudent } from '../models/Student';
 import Class, { IClass, ITimeSlot } from '../models/Class';
 import Attendance from '../models/Attendance';
@@ -41,6 +42,7 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     const { classId, studentId, username } = req.body;
@@ -130,6 +132,7 @@ export const updateStudent = async (req: Request, res: Response) => {
   try {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const { studentId, username } = req.body;
 
     // Validate required fields
@@ -175,6 +178,7 @@ export const updateStudent = async (req: Request, res: Response) => {
 
 export const deleteStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     const { id, studentId, classId } = req.params;  // Get all possible params from URL
@@ -365,6 +369,7 @@ export const getTodayStatus = async (req: Request, res: Response) => {
     res.json({ message: 'Student deleted' });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> parent of 2942016 (Vibe coding)
   }

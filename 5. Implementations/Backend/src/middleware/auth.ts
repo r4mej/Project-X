@@ -30,6 +30,7 @@ export const authenticateToken = async (
   try {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
     
     // Fetch complete user data from database

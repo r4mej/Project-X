@@ -139,6 +139,7 @@ const ViewClass: React.FC = () => {
     try {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       if (!newStudentId.trim() || !newUsername.trim()) {
         Alert.alert('Error', 'Please enter student ID and username.');
         return;
@@ -463,6 +464,7 @@ const ViewClass: React.FC = () => {
       </View>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
       <View style={styles.content}>
         <View style={styles.classHeader}>
@@ -739,6 +741,7 @@ const ViewClass: React.FC = () => {
             exiting={SlideOutDown.springify().damping(15)}
             style={styles.bottomDrawerContent}
           >
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
             <View style={styles.modalContent}>
@@ -1171,6 +1174,7 @@ const styles = StyleSheet.create({
   },
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -1235,6 +1239,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     fontSize: 16,
   },
   submitButton: {
@@ -1258,10 +1263,13 @@ const styles = StyleSheet.create({
     padding: 16,
 =======
 >>>>>>> parent of 2942016 (Vibe coding)
+=======
+>>>>>>> parent of 2942016 (Vibe coding)
     borderWidth: 1,
     borderColor: '#ddd',
     color: '#333',
   },
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   classOptionSubtitle: {
@@ -1389,6 +1397,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   confirmationButtonText: {
@@ -1753,6 +1762,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> parent of 2942016 (Vibe coding)
   },
