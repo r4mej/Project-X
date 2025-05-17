@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Image, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import ClassManager from '../components/attendance/AttendanceManager';
@@ -20,7 +21,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -58,9 +58,32 @@ const CustomDrawerContent = ({ navigation }: any) => {
     }
   };
 
-  const handleImageUpload = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleImageUpload = async () => {
+    try {
+      // Request permission
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant permission to access your photos');
+        return;
+      }
+
+      // Pick the image
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled) {
+        const imageUri = result.assets[0].uri;
+        setProfileImage(imageUri);
+        await saveProfileImage(imageUri);
+        showSuccessNotification('Profile picture updated successfully');
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
     }
   };
 
@@ -70,30 +93,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
     setTimeout(() => {
       setShowNotification(false);
     }, 2000);
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        Alert.alert('Error', 'Image size should be less than 5MB');
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        Alert.alert('Error', 'Please upload an image file');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const imageUri = e.target?.result as string;
-        setProfileImage(imageUri);
-        await saveProfileImage(imageUri);
-        showSuccessNotification('Profile picture updated successfully');
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleRemoveImage = async () => {
@@ -179,13 +178,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
             <Text style={styles.role}>{user?.role?.toUpperCase() || 'INSTRUCTOR'}</Text>
             <Text style={styles.instructorId}>ID: {user?.userId || 'T-0000'}</Text>
           </View>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
         </View>
         <TouchableOpacity
           style={styles.closeButton}

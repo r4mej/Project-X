@@ -1,13 +1,7 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
-
-interface User {
-  _id: string;
-  username: string;
-  email: string;
-  role: 'student' | 'instructor' | 'admin';
-  userId: string;
-}
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -27,16 +21,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check if user is logged in on mount
   useEffect(() => {
     const checkLoggedIn = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const userData = await authAPI.getCurrentUser();
-          setUser(userData);
-        } catch (err) {
-          localStorage.removeItem('token');
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          try {
+            const userData = await authAPI.getCurrentUser();
+            setUser(userData);
+          } catch (err) {
+            await AsyncStorage.removeItem('token');
+          }
         }
+      } catch (err) {
+        console.error('Error checking login status:', err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkLoggedIn();
@@ -47,7 +46,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setError(null);
       const data = await authAPI.login(username, password);
-      localStorage.setItem('token', data.token);
+      await AsyncStorage.setItem('token', data.token);
       setUser(data);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
@@ -61,13 +60,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Call the backend logout endpoint
       await authAPI.logout();
       // Clear local auth state only after successful logout
-      localStorage.removeItem('token');
+      await AsyncStorage.removeItem('token');
       setUser(null);
     } catch (err: any) {
       console.error('Error during logout:', err);
       // If it's a network error or the server is down, still clear local state
       if (!err.response || err.response.status >= 500) {
-        localStorage.removeItem('token');
+        await AsyncStorage.removeItem('token');
         setUser(null);
       }
       throw err; // Propagate the error to the component

@@ -17,6 +17,7 @@ interface TimeSlot {
 }
 
 interface DaySelection {
+  SU: boolean;
   M: boolean;
   T: boolean;
   W: boolean;
@@ -41,6 +42,7 @@ const AttendanceManager: React.FC = () => {
   const [subjectCode, setSubjectCode] = useState('');
   const [schedules, setSchedules] = useState<TimeSlot[]>([]);
   const [selectedDays, setSelectedDays] = useState<DaySelection>({
+    SU: false,
     M: false,
     T: false,
     W: false,
@@ -133,6 +135,7 @@ const AttendanceManager: React.FC = () => {
 
     // Reset schedule form
     setSelectedDays({
+      SU: false,
       M: false,
       T: false,
       W: false,
@@ -631,6 +634,7 @@ const AttendanceManager: React.FC = () => {
               <View style={styles.scheduleForm}>
                 <Text style={styles.label}>Select Days</Text>
                 <View style={styles.daysContainer}>
+                  <DayButton day="SU" label="SU" />
                   <DayButton day="M" label="M" />
                   <DayButton day="T" label="T" />
                   <DayButton day="W" label="W" />

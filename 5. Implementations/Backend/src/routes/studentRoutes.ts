@@ -4,6 +4,9 @@ import {
   deleteStudent,
   getStudentsByClass,
   updateStudent,
+  getTodayClasses,
+  getAttendanceOverview,
+  getTodayStatus
 } from '../controllers/studentController';
 import { authenticateToken } from '../middleware/auth';
 
@@ -12,16 +15,17 @@ const router = express.Router();
 // Apply authentication middleware to all routes
 router.use(authenticateToken);
 
-// Get all students for a class
-router.get('/:classId', getStudentsByClass);
+// Student dashboard endpoints (more specific routes first)
+router.get('/:studentId/classes/today', getTodayClasses);
+router.get('/:studentId/attendance/overview', getAttendanceOverview);
+router.get('/:studentId/attendance/today', getTodayStatus);
 
-// Add a student
+// CRUD operations
 router.post('/', addStudent);
-
-// Update a student
 router.put('/:id', updateStudent);
-
-// Delete a student
 router.delete('/:id', deleteStudent);
+
+// Get all students for a class (less specific route last)
+router.get('/:classId', getStudentsByClass);
 
 export default router; 

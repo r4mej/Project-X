@@ -1,14 +1,32 @@
-import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
-import Attendance from '../models/Attendance';
+import { Request, Response } from 'express';
 import { JWT_SECRET } from '../config';
 import { startOfDay, endOfDay } from 'date-fns';
+import Class from '../models/Class';
+import Attendance from '../models/Attendance';
+import { Types } from 'mongoose';
+import Student from '../models/Student';
 
 interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
-    role?: string;
+    role: string;
   };
+}
+
+interface IClass {
+  _id: Types.ObjectId;
+  instructorId: Types.ObjectId;
+  className: string;
+  subjectCode: string;
+  yearSection: string;
+  schedules: Array<{
+    day: string;
+    startTime: string;
+    endTime: string;
+    startPeriod: string;
+    endPeriod: string;
+  }>;
 }
 
 // Generate a QR code token for a specific class
@@ -156,6 +174,114 @@ export const validateQRCode = async (req: Request, res: Response) => {
     
     res.status(500).json({ 
       message: 'Error validating QR code',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+// Mark attendance using student QR code
+export const markAttendance = async (req: Request, res: Response) => {
+  try {
+    const { classId, studentId, timestamp } = req.body;
+    const instructorId = (req as AuthenticatedRequest).user._id;
+    const userRole = (req as AuthenticatedRequest).user.role;
+
+    console.log('Marking attendance:', { classId, studentId, timestamp, instructorId, userRole });
+
+    if (!classId || !studentId || !timestamp) {
+      console.error('Missing required fields:', { classId, studentId, timestamp });
+      return res.status(400).json({ 
+        message: 'Class ID, student ID, and timestamp are required',
+        error: 'MISSING_REQUIRED_FIELDS'
+      });
+    }
+
+    // Verify that the class exists
+    const classDoc = await Class.findOne({ _id: classId }).lean() as IClass;
+    if (!classDoc) {
+      return res.status(404).json({
+        message: 'Class not found',
+        error: 'CLASS_NOT_FOUND'
+      });
+    }
+
+    // Check if student is enrolled in the class
+    const student = await Student.findOne({ classId, studentId });
+    if (!student) {
+      console.error('Student not enrolled in class:', { studentId, classId });
+      return res.status(404).json({
+        message: 'Student is not enrolled in this class',
+        error: 'STUDENT_NOT_ENROLLED'
+      });
+    }
+
+    // Check if the user is the instructor of this class or an admin
+    if (userRole !== 'admin' && userRole !== 'instructor') {
+      console.error('Unauthorized role:', { userRole });
+      return res.status(403).json({
+        message: 'Only instructors and admins can mark attendance',
+        error: 'UNAUTHORIZED_ROLE'
+      });
+    }
+
+    if (userRole === 'instructor' && classDoc.instructorId.toString() !== instructorId) {
+      console.error('Unauthorized access:', { 
+        instructorId, 
+        classInstructorId: classDoc.instructorId,
+        userRole
+      });
+      return res.status(403).json({
+        message: 'You do not have permission to mark attendance for this class',
+        error: 'UNAUTHORIZED'
+      });
+    }
+
+    // Check if attendance already exists for today
+    const today = new Date(timestamp);
+    const existingAttendance = await Attendance.findOne({
+      classId,
+      studentId,
+      date: {
+        $gte: startOfDay(today),
+        $lte: endOfDay(today)
+      }
+    });
+
+    if (existingAttendance) {
+      // Update existing attendance
+      existingAttendance.status = 'present';
+      existingAttendance.timestamp = new Date(timestamp);
+      await existingAttendance.save();
+
+      console.log('Attendance updated successfully:', existingAttendance);
+
+      return res.json({ 
+        message: 'Attendance updated successfully',
+        attendance: existingAttendance
+      });
+    }
+
+    // Create new attendance record
+    const attendance = new Attendance({
+      classId,
+      studentId,
+      date: today,
+      status: 'present',
+      method: 'qr',
+      timestamp: new Date(timestamp)
+    });
+
+    await attendance.save();
+    console.log('Attendance marked successfully:', attendance);
+
+    res.json({ 
+      message: 'Attendance marked successfully',
+      attendance
+    });
+  } catch (error) {
+    console.error('Error marking attendance:', error);
+    res.status(500).json({ 
+      message: 'Error marking attendance',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }

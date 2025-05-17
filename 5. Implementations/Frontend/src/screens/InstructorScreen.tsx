@@ -5,7 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ClassManager, { Class } from '../components/attendance/AttendanceManager';
-import QRGenerator from '../components/attendance/QRGenerator';
+import QRScanner from '../components/attendance/QRScanner';
 import Reports from '../components/Reports';
 import { useAuth } from '../context/AuthContext';
 import { InstructorBottomTabParamList, InstructorDrawerParamList } from '../navigation/types';
@@ -52,6 +52,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
 
 const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: string; present: number; absent: number; }[] }> = ({ classes, attendanceData }) => {
   const { user } = useAuth();
+  const navigation = useNavigation<NavigationProp>();
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [todayClasses, setTodayClasses] = useState<Class[]>([]);
@@ -69,15 +70,25 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   }, [classes]);
 
   const getDayAbbreviation = (fullDay: string): string => {
-    switch (fullDay.toUpperCase()) {
-      case 'MONDAY': return 'M';
-      case 'TUESDAY': return 'T';
-      case 'WEDNESDAY': return 'W';
-      case 'THURSDAY': return 'TH';
-      case 'FRIDAY': return 'F';
-      case 'SATURDAY': return 'S';
-      default: return '';
-    }
+    console.log('Getting abbreviation for:', fullDay);
+    // Extract just the day name from the full date string
+    const dayName = fullDay.split(',')[0].trim();
+    console.log('Extracted day name:', dayName);
+    
+    const abbreviation = (() => {
+      switch (dayName.toUpperCase()) {
+        case 'SUNDAY': return 'SU';
+        case 'MONDAY': return 'M';
+        case 'TUESDAY': return 'T';
+        case 'WEDNESDAY': return 'W';
+        case 'THURSDAY': return 'TH';
+        case 'FRIDAY': return 'F';
+        case 'SATURDAY': return 'S';
+        default: return '';
+      }
+    })();
+    console.log('Abbreviation result:', abbreviation);
+    return abbreviation;
   };
 
   const filterTodayClasses = () => {
@@ -86,19 +97,21 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     const currentDayAbbrev = getDayAbbreviation(currentDay);
     const currentTime = today.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
     
-    const todaySchedule = classes.filter(classItem => 
-      classItem.schedules.some(schedule => {
+    console.log('Current day:', currentDay);
+    console.log('Current day abbreviation:', currentDayAbbrev);
+    console.log('Current time:', currentTime);
+    console.log('Available classes:', classes);
+    
+    const todaySchedule = classes.filter(classItem => {
+      console.log('Checking class:', classItem.subjectCode);
+      console.log('Class schedules:', classItem.schedules);
+      
+      return classItem.schedules.some(schedule => {
         const isToday = schedule.days.includes(currentDayAbbrev);
-        if (!isToday) return false;
-
-        // Convert schedule times to comparable format
-        const startTime = `${schedule.startTime} ${schedule.startPeriod}`;
-        const endTime = `${schedule.endTime} ${schedule.endPeriod}`;
-        const isOngoing = isTimeInRange(currentTime, startTime, endTime);
-        
+        console.log('Is today?', isToday);
         return isToday;
-      })
-    );
+      });
+    });
     
     // Sort classes by start time
     todaySchedule.sort((a, b) => {
@@ -117,6 +130,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
       return a24Hour - b24Hour;
     });
     
+    console.log('Today\'s schedule:', todaySchedule);
     setTodayClasses(todaySchedule);
   };
 
@@ -177,12 +191,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     }
   };
 
-  const handleGenerateQR = (classItem: Class) => {
-    setSelectedClass(classItem);
-    setShowQRModal(true);
-  };
-
-  const handleQuickGenerateQR = () => {
+  const handleScanQR = () => {
     // Find the current ongoing class or the next class for today
     const currentTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
     
@@ -194,14 +203,16 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     );
 
     if (ongoingClass) {
-      handleGenerateQR(ongoingClass);
+      setSelectedClass(ongoingClass);
+      setShowQRModal(true);
       return;
     }
 
     // If no ongoing class, get the next upcoming class
     const upcomingClass = todayClasses[0]; // Since todayClasses is already sorted by time
     if (upcomingClass) {
-      handleGenerateQR(upcomingClass);
+      setSelectedClass(upcomingClass);
+      setShowQRModal(true);
     } else {
       // Show alert if no classes available
       Alert.alert(
@@ -210,6 +221,15 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
         [{ text: 'OK' }]
       );
     }
+  };
+
+  const handleViewStudents = (classItem: Class) => {
+    navigation.navigate('ClassList', {
+      classId: classItem._id,
+      className: classItem.className,
+      subjectCode: classItem.subjectCode,
+      yearSection: classItem.yearSection
+    });
   };
 
   return (
@@ -265,7 +285,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                       { backgroundColor: isOngoing ? '#e8f5f4' : index % 2 === 0 ? '#f0e8f5' : '#fff4e6' },
                       { borderLeftColor: isOngoing ? '#2eada6' : index % 2 === 0 ? '#8a2be2' : '#ff9f43' }
                     ]}
-                    onPress={() => handleGenerateQR(classItem)}
+                    onPress={() => handleScanQR()}
                   >
                     <View style={styles.classHeader}>
                       <View style={styles.classCodeContainer}>
@@ -323,20 +343,31 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                 { backgroundColor: '#e8f5f4' },
                 todayClasses.length === 0 && styles.disabledButton
               ]}
-              onPress={handleQuickGenerateQR}
+              onPress={handleScanQR}
               disabled={todayClasses.length === 0}
             >
               <Ionicons 
-                name="qr-code" 
+                name="scan" 
                 size={24} 
                 color={todayClasses.length === 0 ? '#999' : '#2eada6'} 
               />
               <Text style={[
                 styles.actionText, 
                 { color: todayClasses.length === 0 ? '#999' : '#2eada6' }
-              ]}>Generate QR</Text>
+              ]}>Scan QR</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#f0e8f5' }]}>
+            <TouchableOpacity 
+              style={[styles.actionButton, { backgroundColor: '#f0e8f5' }]}
+              onPress={() => {
+                if (todayClasses.length > 0) {
+                  handleViewStudents(todayClasses[0]);
+                } else if (classes.length > 0) {
+                  handleViewStudents(classes[0]);
+                } else {
+                  Alert.alert('No Classes', 'You have no classes to view.');
+                }
+              }}
+            >
               <Ionicons name="people" size={24} color="#8a2be2" />
               <Text style={[styles.actionText, { color: '#8a2be2' }]}>View Students</Text>
             </TouchableOpacity>
@@ -352,9 +383,9 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
         </View>
       </View>
 
-      {/* QR Generator Modal */}
+      {/* QR Scanner Modal */}
       {selectedClass && (
-        <QRGenerator
+        <QRScanner
           visible={showQRModal}
           onClose={() => {
             setShowQRModal(false);

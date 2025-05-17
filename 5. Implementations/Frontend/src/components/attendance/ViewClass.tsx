@@ -5,11 +5,12 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { BlurView } from 'expo-blur';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { RootStackParamList } from '../../navigation/types';
-import { attendanceAPI, classAPI, Student, studentAPI } from '../../services/api';
+import { attendanceAPI, classAPI, Student, studentAPI, authAPI } from '../../services/api';
 import QRGenerator from './QRGenerator';
+import QRScanner from './QRScanner';
 
 // Define the route prop type
 type ViewClassRouteProp = RouteProp<RootStackParamList, 'ClassList'>;
@@ -70,6 +71,16 @@ const ViewClass: React.FC = () => {
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(new Set());
+  const [showScanner, setShowScanner] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<{
+    _id: string;
+    subjectCode: string;
+    yearSection: string;
+  }>({
+    _id: '1',
+    subjectCode: 'CS101',
+    yearSection: '3A',
+  });
 
   // Fetch students on mount
   useEffect(() => {
@@ -129,11 +140,23 @@ const ViewClass: React.FC = () => {
       return;
     }
     try {
-      // Debug: Check if we have a token
+      // Debug: Check if we have a token and user role
       const token = await AsyncStorage.getItem('token');
       if (!token) {
         Alert.alert('Error', 'Not logged in. Please log in first.');
         return;
+      }
+
+      // Debug: Check current user
+      try {
+        const currentUser = await authAPI.getCurrentUser();
+        console.log('Current user:', {
+          id: currentUser._id,
+          role: currentUser.role,
+          username: currentUser.username
+        });
+      } catch (userError) {
+        console.error('Error getting current user:', userError);
       }
       
       const newStudent = await studentAPI.addStudent({
@@ -432,443 +455,368 @@ const ViewClass: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={28} color="white" />
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Student List</Text>
+        <Text style={styles.headerTitle}>Class View</Text>
       </View>
-      {/* Subject Code Row */}
-      <View style={styles.subjectRow}>
-        <Text style={styles.subjectCode}>{subjectCode}{yearSection ? ` (${yearSection})` : ''}</Text>
-        {isSelectionMode ? (
-          <TouchableOpacity
-            style={styles.selectAllButton}
-            onPress={handleSelectAll}
-          >
-            <Ionicons
-              name={isAllSelected ? "checkbox" : "square-outline"}
-              size={24}
-              color="#2eada6"
-            />
-            <Text style={styles.selectAllText}>Select All</Text>
-          </TouchableOpacity>
+
+      <View style={styles.content}>
+        <View style={styles.classHeader}>
+          <Text style={styles.classInfo}>
+            {subjectCode} - {yearSection}
+          </Text>
+          <View style={styles.headerActions}>
+            {isSelectionMode ? (
+              <>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleSelectAll}
+                >
+                  <Ionicons
+                    name={isAllSelected ? "checkbox" : "square-outline"}
+                    size={24}
+                    color="#2eada6"
+                  />
+                  <Text style={styles.actionText}>
+                    {isAllSelected ? "Deselect All" : "Select All"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: "#ff6b6b" }]}
+                  onPress={() => setShowDeleteModal(true)}
+                >
+                  <Ionicons name="trash-outline" size={24} color="white" />
+                  <Text style={[styles.actionText, { color: "white" }]}>
+                    Delete Selected
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={exitSelectionMode}
+                >
+                  <Text style={styles.actionText}>Cancel</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: "#2eada6" }]}
+                  onPress={() => setAddModalVisible(true)}
+                >
+                  <Ionicons name="add" size={24} color="white" />
+                  <Text style={[styles.actionText, { color: "white" }]}>
+                    Add Student
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={() => {
+                    fetchAvailableClasses();
+                    setCloneModalVisible(true);
+                  }}
+                >
+                  <Ionicons name="copy-outline" size={24} color="#2eada6" />
+                  <Text style={styles.actionText}>Clone Students</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        {loading ? (
+          <ActivityIndicator size="large" color="#2eada6" style={styles.loader} />
+        ) : students.length > 0 ? (
+          <FlatList
+            data={sortedStudents}
+            renderItem={renderItem}
+            keyExtractor={(item) => item._id}
+            contentContainerStyle={styles.listContainer}
+          />
         ) : (
-          <View style={styles.actionButtons}>
-            <TouchableOpacity 
-              style={styles.cloneButton} 
-              onPress={() => {
-                fetchAvailableClasses();
-                setCloneModalVisible(true);
-              }}
+          <View style={styles.emptyState}>
+            <Ionicons name="people-outline" size={48} color="#ccc" />
+            <Text style={styles.emptyText}>No students added yet</Text>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: "#2eada6" }]}
+              onPress={() => setAddModalVisible(true)}
             >
-              <Ionicons name="copy" size={24} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addButton} onPress={() => setAddModalVisible(true)}>
               <Ionicons name="add" size={24} color="white" />
+              <Text style={[styles.actionText, { color: "white" }]}>
+                Add Your First Student
+              </Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* Student List */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#2eada6" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={sortedStudents}
-          renderItem={renderItem}
-          keyExtractor={(item) => item._id}
-          contentContainerStyle={[
-            styles.listContainer,
-            { paddingBottom: isSelectionMode ? 80 : 140 }
-          ]}
-          ListEmptyComponent={<Text style={styles.emptyText}>No students yet.</Text>}
-          showsVerticalScrollIndicator={true}
-          bounces={true}
-          overScrollMode="always"
-        />
-      )}
-
-      {/* Footer */}
-      {!isSelectionMode && (
-        <View style={styles.footer}>
-          <TouchableOpacity 
-            style={styles.takeAttendanceButton}
-            onPress={() => setShowQRModal(true)}
-          >
-            <Ionicons name="calendar" size={24} color="white" />
-            <Text style={styles.takeAttendanceText}>Take Attendance</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.sortButtonFooter}
-            onPress={() => setSortAscending(!sortAscending)}
-          >
-            <Ionicons 
-              name={sortAscending ? "arrow-up" : "arrow-down"} 
-              size={24} 
-              color="#2eada6" 
-            />
-            <Text style={styles.sortText}>
-              {sortAscending ? "A-Z" : "Z-A"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Selection Mode Bottom Bar */}
-      {isSelectionMode && (
-        <View style={styles.selectionBottomBar}>
-          <TouchableOpacity
-            style={styles.cancelSelectionButton}
-            onPress={exitSelectionMode}
-          >
-            <Text style={styles.cancelSelectionText}>Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.deleteSelectedButton,
-              selectedStudents.size === 0 && styles.deleteButtonDisabled
-            ]}
-            onPress={() => {
-              if (selectedStudents.size > 0) {
-                setShowDeleteModal(true);
-              }
-            }}
-            disabled={selectedStudents.size === 0}
-          >
-            <Ionicons name="trash-outline" size={24} color="white" />
-            <Text style={styles.deleteSelectedText}>
-              Delete Selected ({selectedStudents.size})
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-      {/* Delete Confirmation Modal */}
-      <Modal
-        transparent={true}
-        visible={showDeleteModal}
-        onRequestClose={() => setShowDeleteModal(false)}
-        animationType="fade"
-      >
-        <View style={styles.deleteModalContainer}>
-          <View style={styles.deleteModalContent}>
-            <Text style={styles.deleteModalTitle}>Confirm Delete</Text>
-            <Text style={styles.deleteModalText}>
-              Are you sure you want to delete {selectedStudents.size} selected student{selectedStudents.size !== 1 ? 's' : ''}?
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowDeleteModal(false);
-                  if (selectedStudents.size === 1) {
-                    setSelectedStudents(new Set());
-                  }
-                }}
-              >
-                <Text style={styles.deleteModalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.confirmButton]}
-                onPress={handleMultipleDelete}
-              >
-                <Text style={styles.deleteModalButtonText}>Delete</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-      {/* Success Notification */}
-      {showNotification && (
-        <View style={styles.notificationContainer}>
-          <View style={styles.notification}>
-            <Ionicons name="checkmark-circle" size={24} color="white" />
-            <Text style={styles.notificationText}>{notificationMessage}</Text>
-          </View>
-        </View>
-      )}
-      {/* Blur Overlays */}
-      <Modal
-        transparent={true}
-        visible={addModalVisible}
-        animationType="none"
-      >
-        <BlurView
-          intensity={50}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-      </Modal>
-
-      <Modal
-        transparent={true}
-        visible={editModalVisible}
-        animationType="none"
-      >
-        <BlurView
-          intensity={50}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-      </Modal>
-
-      <Modal
-        transparent={true}
-        visible={cloneModalVisible}
-        animationType="none"
-      >
-        <BlurView
-          intensity={50}
-          tint="dark"
-          style={StyleSheet.absoluteFill}
-        />
-      </Modal>
-
       {/* Add Student Modal */}
-      <Modal 
-        visible={addModalVisible} 
-        transparent 
-        animationType="none"
+      <Modal
+        visible={addModalVisible}
+        animationType="slide"
+        transparent={true}
         onRequestClose={handleCloseAddModal}
       >
-        <View style={styles.modalOverlay}>
-          <Animated.View 
-            entering={SlideInDown.springify().damping(15)}
-            exiting={SlideOutDown.springify().damping(15)}
-            style={styles.bottomDrawerContent}
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <Animated.View
+            entering={SlideInDown}
+            exiting={SlideOutDown}
+            style={styles.modalContainer}
           >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Add Student</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="ID Number"
-              value={newStudentId}
-              onChangeText={setNewStudentId}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Surname"
-              value={newSurname}
-              onChangeText={setNewSurname}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="First Name"
-              value={newFirstName}
-              onChangeText={setNewFirstName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Middle Initial"
-              value={newMiddleInitial}
-              onChangeText={setNewMiddleInitial}
-              maxLength={1}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={handleCloseAddModal}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]} 
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add New Student</Text>
+                <TouchableOpacity onPress={handleCloseAddModal}>
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Student ID"
+                value={newStudentId}
+                onChangeText={setNewStudentId}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Surname"
+                value={newSurname}
+                onChangeText={setNewSurname}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="First Name"
+                value={newFirstName}
+                onChangeText={setNewFirstName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Middle Initial"
+                value={newMiddleInitial}
+                onChangeText={setNewMiddleInitial}
+              />
+              <TouchableOpacity
+                style={styles.submitButton}
                 onPress={handleAddStudent}
               >
-                <Text style={styles.modalButtonText}>Add</Text>
+                <Text style={styles.submitButtonText}>Add Student</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
+        </BlurView>
       </Modal>
 
       {/* Edit Student Modal */}
-      <Modal 
-        visible={editModalVisible} 
-        transparent 
-        animationType="none"
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
         onRequestClose={handleCloseEditModal}
       >
-        <View style={styles.modalOverlay}>
-          <Animated.View 
-            entering={SlideInDown.springify().damping(15)}
-            exiting={SlideOutDown.springify().damping(15)}
-            style={styles.bottomDrawerContent}
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <Animated.View
+            entering={SlideInDown}
+            exiting={SlideOutDown}
+            style={styles.modalContainer}
           >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Edit Student</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="ID Number"
-              value={editStudentId}
-              onChangeText={setEditStudentId}
-              keyboardType="numeric"
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Surname"
-              value={editSurname}
-              onChangeText={setEditSurname}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="First Name"
-              value={editFirstName}
-              onChangeText={setEditFirstName}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Middle Initial"
-              value={editMiddleInitial}
-              onChangeText={setEditMiddleInitial}
-              maxLength={1}
-            />
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={handleCloseEditModal}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.saveButton]} 
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit Student</Text>
+                <TouchableOpacity onPress={handleCloseEditModal}>
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Student ID"
+                value={editStudentId}
+                onChangeText={setEditStudentId}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Surname"
+                value={editSurname}
+                onChangeText={setEditSurname}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="First Name"
+                value={editFirstName}
+                onChangeText={setEditFirstName}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Middle Initial"
+                value={editMiddleInitial}
+                onChangeText={setEditMiddleInitial}
+              />
+              <TouchableOpacity
+                style={styles.submitButton}
                 onPress={handleEditStudent}
               >
-                <Text style={styles.modalButtonText}>Save</Text>
+                <Text style={styles.submitButtonText}>Save Changes</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
+        </BlurView>
       </Modal>
 
-      {/* Clone Modal */}
+      {/* Clone Students Modal */}
       <Modal
         visible={cloneModalVisible}
-        transparent
-        animationType="none"
+        animationType="slide"
+        transparent={true}
         onRequestClose={handleCloseCloneModal}
       >
-        <View style={styles.modalOverlay}>
-          <Animated.View 
-            entering={SlideInDown.springify().damping(15)}
-            exiting={SlideOutDown.springify().damping(15)}
-            style={styles.bottomDrawerContent}
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <Animated.View
+            entering={SlideInDown}
+            exiting={SlideOutDown}
+            style={styles.modalContainer}
           >
-            <View style={styles.modalHandle} />
-            <Text style={styles.modalTitle}>Clone Students</Text>
-            <Text style={styles.modalSubtitle}>Select target class:</Text>
-            
-            <FlatList
-              data={availableClasses}
-              keyExtractor={(item) => item._id}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.classOption,
-                    selectedTargetClass === item._id && styles.selectedClassOption
-                  ]}
-                  onPress={() => setSelectedTargetClass(item._id)}
-                >
-                  <Text style={[
-                    styles.classOptionText,
-                    selectedTargetClass === item._id && styles.selectedClassOptionText
-                  ]}>
-                    {item.className} - {item.subjectCode}
-                    {item.yearSection ? ` (${item.yearSection})` : ''}
-                  </Text>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Clone Students</Text>
+                <TouchableOpacity onPress={handleCloseCloneModal}>
+                  <Ionicons name="close" size={24} color="#666" />
                 </TouchableOpacity>
-              )}
-              style={styles.classOptionsList}
-            />
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelButton]} 
-                onPress={handleCloseCloneModal}
-              >
-                <Text style={styles.modalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
+              </View>
+              <ScrollView style={styles.modalScrollContent}>
+                {availableClasses.map((classItem) => (
+                  <TouchableOpacity
+                    key={classItem._id}
+                    style={[
+                      styles.classOption,
+                      selectedTargetClass === classItem._id && styles.selectedClassOption
+                    ]}
+                    onPress={() => setSelectedTargetClass(classItem._id)}
+                  >
+                    <View>
+                      <Text style={styles.classOptionTitle}>{classItem.className}</Text>
+                      <Text style={styles.classOptionSubtitle}>
+                        {classItem.subjectCode} - {classItem.yearSection}
+                      </Text>
+                    </View>
+                    {selectedTargetClass === classItem._id && (
+                      <Ionicons name="checkmark-circle" size={24} color="#2eada6" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
                 style={[
-                  styles.modalButton, 
-                  styles.saveButton,
+                  styles.submitButton,
                   !selectedTargetClass && styles.disabledButton
-                ]} 
+                ]}
                 onPress={handleCloneStudents}
                 disabled={!selectedTargetClass}
               >
-                <Text style={styles.modalButtonText}>Clone</Text>
+                <Text style={styles.submitButtonText}>Clone Students</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
-        </View>
+        </BlurView>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <View style={styles.confirmationModal}>
+            <View style={styles.confirmationContent}>
+              <Ionicons name="warning" size={48} color="#ff6b6b" />
+              <Text style={styles.confirmationTitle}>Delete Students?</Text>
+              <Text style={styles.confirmationText}>
+                Are you sure you want to delete {selectedStudents.size} student{selectedStudents.size !== 1 ? 's' : ''}?
+                This action cannot be undone.
+              </Text>
+              <View style={styles.confirmationButtons}>
+                <TouchableOpacity
+                  style={[styles.confirmationButton, styles.cancelButton]}
+                  onPress={() => setShowDeleteModal(false)}
+                >
+                  <Text style={styles.confirmationButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmationButton, styles.deleteButton]}
+                  onPress={handleMultipleDelete}
+                >
+                  <Text style={[styles.confirmationButtonText, { color: 'white' }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </BlurView>
+      </Modal>
+
       {/* Drop Student Confirmation Modal */}
       <Modal
-        transparent={true}
         visible={showDropConfirmModal}
-        onRequestClose={() => setShowDropConfirmModal(false)}
         animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowDropConfirmModal(false)}
       >
-        <View style={styles.deleteModalContainer}>
-          <View style={styles.deleteModalContent}>
-            <View style={styles.modalIconContainer}>
-              <Ionicons name="warning" size={50} color="#ff6b6b" />
-            </View>
-            <Text style={styles.deleteModalTitle}>Drop Student</Text>
-            <Text style={styles.deleteModalText}>
-              Are you sure you want to drop {studentToDelete?.name}?
-              {'\n'}This action cannot be undone.
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.cancelButton]}
-                onPress={() => {
-                  setShowDropConfirmModal(false);
-                  setStudentToDelete(null);
-                }}
-              >
-                <Text style={styles.deleteModalButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.deleteModalButton, styles.confirmButton]}
-                onPress={confirmDropStudent}
-              >
-                <Text style={styles.deleteModalButtonText}>Drop</Text>
-              </TouchableOpacity>
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <View style={styles.confirmationModal}>
+            <View style={styles.confirmationContent}>
+              <Ionicons name="warning" size={48} color="#ff6b6b" />
+              <Text style={styles.confirmationTitle}>Drop Student?</Text>
+              <Text style={styles.confirmationText}>
+                Are you sure you want to drop {studentToDelete?.name}?
+                This action cannot be undone.
+              </Text>
+              <View style={styles.confirmationButtons}>
+                <TouchableOpacity
+                  style={[styles.confirmationButton, styles.cancelButton]}
+                  onPress={() => setShowDropConfirmModal(false)}
+                >
+                  <Text style={styles.confirmationButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmationButton, styles.deleteButton]}
+                  onPress={confirmDropStudent}
+                >
+                  <Text style={[styles.confirmationButtonText, { color: 'white' }]}>Drop</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        </BlurView>
       </Modal>
+
       {/* Success Modal */}
       <Modal
-        transparent={true}
         visible={showSuccessModal}
         animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
+        transparent={true}
       >
-        <View style={styles.successModalContainer}>
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={50} color="#4CAF50" />
+        <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="dark">
+          <View style={styles.successModal}>
+            <View style={styles.successContent}>
+              <Ionicons name="checkmark-circle" size={48} color="#2eada6" />
+              <Text style={styles.successText}>{successModalMessage}</Text>
             </View>
-            <Text style={styles.successModalTitle}>Success!</Text>
-            <Text style={styles.successModalText}>{successModalMessage}</Text>
           </View>
-        </View>
+        </BlurView>
       </Modal>
-      {/* QR Generator Modal */}
-      <QRGenerator
-        visible={showQRModal}
-        onClose={handleCloseQRModal}
-        classId={classId}
-        subjectCode={subjectCode}
-        yearSection={yearSection}
-      />
+
+      {/* QR Scanner Modal */}
+      {selectedClass && (
+        <QRScanner
+          visible={showQRModal}
+          onClose={handleCloseQRModal}
+          classId={selectedClass._id}
+          subjectCode={selectedClass.subjectCode}
+          yearSection={selectedClass.yearSection}
+        />
+      )}
     </View>
   );
 };
@@ -876,97 +824,88 @@ const ViewClass: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 0,
+    backgroundColor: '#f8f8f8',
   },
-  headerContainer: {
-    width: '100%',
-    backgroundColor: '#2eada6',
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 20,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'space-between',
+    backgroundColor: '#2eada6',
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
-    paddingLeft: 0,
+    marginRight: 16,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    textAlign: 'right',
+  },
+  content: {
     flex: 1,
-    marginLeft: 0,
+    padding: 16,
   },
-  subjectRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  classHeader: {
+    marginBottom: 16,
   },
-  subjectInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  subjectCode: {
+  classInfo: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#333',
+    marginBottom: 8,
   },
-  addButton: {
-    backgroundColor: '#2eada6',
-    borderRadius: 8,
-    padding: 8,
+  headerActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 40,
-    height: 40,
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2eada6',
+    gap: 4,
+  },
+  actionText: {
+    fontSize: 14,
+    color: '#2eada6',
+    marginLeft: 4,
+  },
+  listContainer: {
+    paddingBottom: 16,
+  },
+  studentCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 4,
   },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 20,
-  },
-  studentCard: {
-    backgroundColor: '#e8f4ea',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  expandedStudentCard: {
-    backgroundColor: '#d4e9d7',
+  selectedCard: {
+    backgroundColor: '#f0f9f9',
     borderWidth: 2,
     borderColor: '#2eada6',
+  },
+  expandedStudentCard: {
+    paddingBottom: 8,
   },
   studentInfo: {
     flex: 1,
   },
   studentHeader: {
-    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  checkbox: {
+    marginRight: 12,
   },
   studentMainInfo: {
     flex: 1,
@@ -974,416 +913,174 @@ const styles = StyleSheet.create({
   studentName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1a5e57',
-    marginBottom: 4,
+    color: '#333',
   },
   studentId: {
     fontSize: 14,
-    color: '#2b4f4c',
-    marginBottom: 4,
-  },
-  attendanceStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  attendanceStatusText: {
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
+    color: '#666',
+    marginTop: 2,
   },
   studentActionsExpanded: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 10,
-    gap: 10,
+    gap: 12,
+    marginTop: 8,
   },
-  actionButton: {
-    flexDirection: 'row',
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    marginLeft: 8,
   },
-  actionText: {
-    marginLeft: 6,
-    fontSize: 14,
-    color: '#2b4f4c',
-    fontWeight: '500',
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
   },
   emptyText: {
-    textAlign: 'center',
-    color: '#aaa',
-    marginTop: 40,
     fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginVertical: 16,
   },
-  bottomDrawerOverlay: {
+  modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  bottomDrawerContent: {
+  modalContent: {
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    padding: 24,
-    paddingBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+    padding: 20,
+    maxHeight: '80%',
   },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginVertical: 12,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  input: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
     color: '#333',
   },
-  modalActions: {
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  submitButton: {
+    backgroundColor: '#2eada6',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  submitButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  modalScrollContent: {
+    maxHeight: 300,
+  },
+  classOption: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
-    gap: 10,
+    alignItems: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  modalButton: {
+  selectedClassOption: {
+    borderColor: '#2eada6',
+    backgroundColor: '#f0f9f9',
+  },
+  classOptionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  classOptionSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+  },
+  disabledButton: {
+    opacity: 0.5,
+  },
+  confirmationModal: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  confirmationContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 400,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  confirmationText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  confirmationButton: {
     flex: 1,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: '#9E9E9E',
-  },
-  saveButton: {
-    backgroundColor: '#2eada6',
-  },
-  modalButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  selectedCard: {
-    backgroundColor: '#d4e9d7',
-    borderWidth: 2,
-    borderColor: '#2eada6',
-  },
-  checkbox: {
-    marginRight: 10,
-  },
-  selectAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
-  },
-  selectAllText: {
-    color: '#2eada6',
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  selectionBottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    flexDirection: 'row',
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  cancelSelectionButton: {
-    flex: 1,
-    padding: 12,
-    borderRadius: 8,
     backgroundColor: '#f0f0f0',
-    marginRight: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  cancelSelectionText: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  deleteSelectedButton: {
-    flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-    borderRadius: 8,
+  deleteButton: {
     backgroundColor: '#ff6b6b',
   },
-  deleteButtonDisabled: {
-    backgroundColor: '#ffb3b3',
-  },
-  deleteSelectedText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  deleteModalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  deleteModalContent: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  deleteModalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ff6b6b',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  deleteModalText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  deleteModalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalButton: {
-    flex: 1,
-    padding: 15,
-    borderRadius: 8,
-    marginHorizontal: 5,
-  },
-  confirmButton: {
-    backgroundColor: '#ff6b6b',
-  },
-  deleteModalButtonText: {
-    color: 'white',
-    textAlign: 'center',
+  confirmationButtonText: {
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  notificationContainer: {
-    position: 'absolute',
-    bottom: 20,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 1000,
-  },
-  notification: {
-    backgroundColor: '#4CAF50',
-    borderRadius: 25,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  notificationText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  cloneButton: {
-    backgroundColor: '#4a90e2',
-    borderRadius: 8,
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 40,
-    height: 40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  modalSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 12,
-  },
-  classOptionsList: {
-    maxHeight: 300,
-    marginBottom: 16,
-  },
-  classOption: {
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  selectedClassOption: {
-    backgroundColor: '#e8f4ea',
-    borderColor: '#2eada6',
-  },
-  classOptionText: {
-    fontSize: 16,
     color: '#333',
   },
-  selectedClassOptionText: {
-    color: '#2eada6',
-    fontWeight: 'bold',
-  },
-  disabledButton: {
-    backgroundColor: '#cccccc',
-  },
-  successModalContainer: {
+  successModal: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  successModalContent: {
-    backgroundColor: 'white',
-    borderRadius: 15,
     padding: 20,
-    alignItems: 'center',
-    width: '80%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  successIconContainer: {
-    marginBottom: 15,
-  },
-  successModalTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  successModalText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    justifyContent: 'flex-end',
-  },
-  modalIconContainer: {
-    marginBottom: 15,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  successContent: {
     backgroundColor: 'white',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: -2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
+    width: '100%',
+    maxWidth: 400,
   },
-  sortButtonFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
-  },
-  takeAttendanceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#2eada6',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  takeAttendanceText: {
-    color: 'white',
+  successText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  sortText: {
-    color: '#2eada6',
-    marginLeft: 8,
-    fontSize: 16,
-    fontWeight: '500',
+    color: '#333',
+    textAlign: 'center',
+    marginTop: 16,
   },
 });
 

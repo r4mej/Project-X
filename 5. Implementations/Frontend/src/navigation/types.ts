@@ -31,9 +31,16 @@ export type InstructorDrawerParamList = {
   AttendanceManager: undefined;
   AboutApp: undefined;
   HelpSupport: undefined;
+  ClassList: {
+    classId: string;
+    className: string;
+    subjectCode: string;
+    yearSection: string;
+  };
 };
 
 export type StudentDrawerParamList = {
+  MainTabs: undefined;
   Dashboard: undefined;
   EditProfile: undefined;
   AttendanceSettings: undefined;
@@ -41,6 +48,10 @@ export type StudentDrawerParamList = {
   HelpSupport: undefined;
   AboutApp: undefined;
   Records: undefined;
+  QRScanner: undefined;
+  Location: undefined;
+  History: undefined;
+  Schedule: undefined;
 };
 
 export type AttendanceNavigationParamList = {

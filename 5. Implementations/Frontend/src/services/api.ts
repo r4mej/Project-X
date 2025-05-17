@@ -3,31 +3,55 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { UserRole } from '../navigation/types';
 
+// Get the local IP address for Android
+const getLocalIPAddress = () => {
+  // Common local network IPs to try
+  return [
+    '192.168.31.191',  // Your current IP
+    '192.168.1.100',
+    '192.168.0.100',
+    '192.168.1.1',
+    '192.168.0.1',
+    '10.0.2.2',        // Android emulator
+    'localhost',
+    '127.0.0.1'
+  ];
+};
+
 // Allow both HTTP and HTTPS options with fallbacks
 // Try different connection options
-const API_URLS = [
-  Platform.OS === 'web' 
-    ? 'http://localhost:5000/api'
-    : 'http://10.0.2.2:5000/api',    // Android emulator localhost
-  Platform.OS === 'web'
-    ? 'http://127.0.0.1:5000/api'
-    : 'http://localhost:5000/api',    // iOS simulator
-  'https://localhost:5000/api',   // HTTPS version (if enabled)
-  'http://192.168.1.1:5000/api',  // Common local network IP
-  'http://192.168.0.1:5000/api',  // Alternative local network IP
-];
+const API_URLS = (() => {
+  const ips = getLocalIPAddress();
+  const urls = [];
+
+  if (Platform.OS === 'android') {
+    // For Android, try all local IPs
+    urls.push(...ips.map(ip => `http://${ip}:5000/api`));
+  } else if (Platform.OS === 'ios') {
+    // For iOS, localhost should work
+    urls.push('http://localhost:5000/api');
+  } else {
+    // For web
+    urls.push('http://localhost:5000/api');
+  }
+
+  return urls;
+})();
 
 // Maximum number of retries for failed requests
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000; // 1 second
 
-// Create axios instance
+// Increase timeout for mobile devices
+const TIMEOUT = Platform.OS === 'web' ? 10000 : 30000; // 30 seconds for mobile
+
+// Create axios instance with the first URL
 const api = axios.create({
-  baseURL: API_URLS[0], // Start with the first option
+  baseURL: API_URLS[0],
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: TIMEOUT,
 });
 
 // Add a function to try different URLs if the primary fails
@@ -187,9 +211,10 @@ export const userAPI = {
   deleteUser: async (id: string) => {
     try {
       const currentUser = await authAPI.getCurrentUser();
+      const token = await AsyncStorage.getItem('token');
       const response = await api.delete(`/users/${id}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${token}`,
         },
         data: {
           requestingUserId: currentUser._id
@@ -223,7 +248,7 @@ export const logAPI = {
   },
   clearLogs: async () => {
     console.log('Sending clear logs request...');
-    const token = localStorage.getItem('token');
+    const token = await AsyncStorage.getItem('token');
     console.log('Token:', token);
     if (!token) {
       throw new Error('No authorization token found');
@@ -287,6 +312,21 @@ export const studentAPI = {
   deleteStudent: async (id: string) => {
     await api.delete(`/students/${id}`);
   },
+  // Get today's classes for a student
+  getTodayClasses: async (studentId: string): Promise<any> => {
+    const response = await api.get(`/students/${studentId}/classes/today`);
+    return response.data;
+  },
+  // Get student's attendance overview
+  getAttendanceOverview: async (studentId: string): Promise<any> => {
+    const response = await api.get(`/students/${studentId}/attendance/overview`);
+    return response.data;
+  },
+  // Get student's attendance status for today
+  getTodayStatus: async (studentId: string): Promise<any> => {
+    const response = await api.get(`/students/${studentId}/attendance/today`);
+    return response.data;
+  },
 };
 
 export interface Attendance {
@@ -311,65 +351,22 @@ export const attendanceAPI = {
   // Test connection to the server
   async testConnection(): Promise<boolean> {
     try {
-      // Step 1: Try the root endpoint first (simplest)
-      console.log('Testing connection to server root...');
-      try {
-        const rootResponse = await axios.get('http://localhost:5000/');
-        console.log('Root connection successful:', rootResponse.data);
-        api.defaults.baseURL = 'http://localhost:5000/api';
-        return true;
-      } catch (rootError) {
-        console.error('Root connection failed');
-      }
-      
-      // Step 2: Try alternative root
-      try {
-        const rootResponse = await axios.get('http://127.0.0.1:5000/');
-        console.log('Alternative root connection successful:', rootResponse.data);
-        api.defaults.baseURL = 'http://127.0.0.1:5000/api';
-        return true;
-      } catch (altRootError) {
-        console.error('Alternative root connection failed');
-      }
-      
-      // Step 3: Try the general API test endpoint
-      try {
-        console.log('Testing connection to general API endpoint...');
-        const apiResponse = await axios.get('http://localhost:5000/api/test');
-        console.log('API test connection successful:', apiResponse.data);
-        api.defaults.baseURL = 'http://localhost:5000/api';
-        return true;
-      } catch (apiError) {
-        console.error('API test connection failed');
-      }
-      
-      // Step 4: As a last resort, try the attendance test
-      console.log('Testing connection to attendance API...');
-      const response = await axios.get(`${API_URLS[0]}/attendance/test`);
-      console.log('Connection test successful:', response.data);
+      const response = await api.get('/attendance/test');
       return true;
-    } catch (error: any) {
-      console.error('Connection test failed for primary URL');
-      
-      // Try alternative URLs
-      for (let i = 1; i < API_URLS.length; i++) {
-        try {
-          console.log(`Testing connection to alternative URL: ${API_URLS[i]}/test`);
-          const response = await axios.get(`${API_URLS[i]}/test`);
-          console.log(`Connection successful with ${API_URLS[i]}:`, response.data);
-          
-          // Update the default baseURL to the working one
-          api.defaults.baseURL = API_URLS[i];
-          console.log('Updated API baseURL to:', API_URLS[i]);
-          
-          return true;
-        } catch (altError) {
-          console.error(`Alternative URL ${API_URLS[i]} also failed`);
-        }
-      }
-      
-      console.error('All connection attempts failed');
+    } catch (error) {
+      console.error('Attendance API connection test failed:', error);
       return false;
+    }
+  },
+
+  // Validate QR code token
+  async validateQRCode(token: string): Promise<any> {
+    try {
+      const response = await api.post('/qr/validate', { token });
+      return response.data;
+    } catch (error) {
+      console.error('Error validating QR code:', error);
+      throw error;
     }
   },
 
@@ -392,63 +389,58 @@ export const attendanceAPI = {
         ? navigator.userAgent 
         : `${Platform.OS} ${Platform.Version}`;
       
-      // Add device info to the request
-      const requestData = {
-        ...data,
-        deviceInfo: data.deviceInfo || deviceInfo,
-        timestamp: data.timestamp || new Date().toISOString(),
-        recordedVia: data.recordedVia || 'qr'
-      };
-      
-      // Get token explicitly for troubleshooting
+      // Get current user and token
+      const currentUser = await authAPI.getCurrentUser();
       const token = await AsyncStorage.getItem('token');
+      
       if (!token) {
         console.error('No authentication token found when submitting attendance');
         throw new Error('Authentication token missing. Please log in again.');
       }
       
-      console.log('Submitting attendance with token:', token.substring(0, 10) + '...');
-      console.log('Request data:', JSON.stringify(requestData));
-      console.log('Using API URL:', api.defaults.baseURL);
+      // Add device info, user role, and instructor ID to the request
+      const requestData = {
+        ...data,
+        deviceInfo: data.deviceInfo || deviceInfo,
+        timestamp: data.timestamp || new Date().toISOString(),
+        recordedVia: data.recordedVia || 'qr',
+        role: currentUser.role,
+        instructorId: currentUser._id
+      };
       
-      try {
-        // First try without the additional Authorization header (rely on the interceptor)
-        const response = await api.post('/attendance', requestData);
-        console.log('Attendance submission successful:', response.data);
-        return response.data.attendance;
-      } catch (initialError: any) {
-        console.log('Initial request failed, trying with explicit Authorization header');
-        
-        // If that fails, try with explicit headers
-        const response = await api.post('/attendance', requestData, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('Attendance submission successful with explicit header:', response.data);
-        return response.data.attendance;
-      }
+      console.log('Submitting attendance with data:', JSON.stringify(requestData));
+      
+      const response = await api.post('/attendance', requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('Attendance submission successful:', response.data);
+      return response.data.attendance;
     } catch (error: any) {
       console.error('Error submitting attendance:', error);
       
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Server response:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+      }
+      
       // Network connection errors
       if (error.code === 'ECONNABORTED') {
-        console.error('Request timeout - server might be slow or unreachable');
         throw new Error('Connection timeout. Server is not responding.');
       }
       
       if (!error.response) {
-        console.error('Network error - no response from server');
         throw new Error('Network error. Cannot connect to the attendance server.');
       }
       
       if (error.response) {
-        console.error('Server response:', error.response.status, error.response.data);
         if (error.response.status === 401 || error.response.status === 403) {
-          // Handle authentication errors
-          AsyncStorage.removeItem('token'); // Clear invalid token
+          AsyncStorage.removeItem('token');
           throw new Error('Authentication failed. Please log in again.');
         } else if (error.response.status === 404) {
           throw new Error('Server endpoint not found. Ensure backend server is running at ' + api.defaults.baseURL);
@@ -536,6 +528,66 @@ export const attendanceAPI = {
       throw error;
     }
   },
+
+  markAttendance: async (data: { 
+    classId: string; 
+    studentId: string; 
+    timestamp: string 
+  }): Promise<any> => {
+    try {
+      // Get current user and token
+      const currentUser = await authAPI.getCurrentUser();
+      const token = await AsyncStorage.getItem('token');
+      
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      if (!currentUser || !currentUser.role) {
+        throw new Error('User role not found');
+      }
+
+      // Ensure role is one of the valid values
+      if (!['student', 'instructor', 'admin'].includes(currentUser.role)) {
+        throw new Error(`Invalid role: ${currentUser.role}`);
+      }
+
+      // Include userRole in request body
+      const requestData = {
+        ...data,
+        userRole: currentUser.role,
+        instructorId: currentUser._id
+      };
+      
+      console.log('Current user data:', {
+        id: currentUser._id,
+        role: currentUser.role,
+        username: currentUser.username
+      });
+      console.log('Marking attendance with data:', JSON.stringify(requestData));
+      
+      const response = await api.post('/qr/mark-attendance', requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-user-role': currentUser.role
+        }
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Error marking attendance via QR:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Server response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.config?.headers,
+          requestData: error.response.config?.data
+        });
+      }
+      throw error;
+    }
+  },
 };
 
 export const reportAPI = {
@@ -608,37 +660,83 @@ export const reportAPI = {
 };
 
 export const qrAPI = {
-  generateQRCode: async (classId: string) => {
+  // Generate QR code for a class
+  async generateQRCode(classId: string): Promise<any> {
+    const response = await api.post('/api/qr/generate', { classId });
+    return response.data;
+  },
+
+  // Validate QR code token
+  async validateQRCode(token: string): Promise<any> {
+    const response = await api.post('/api/qr/validate', { token });
+    return response.data;
+  },
+
+  // Mark attendance using student QR code
+  markAttendance: async (data: { 
+    classId: string; 
+    studentId: string; 
+    timestamp: string 
+  }): Promise<any> => {
     try {
-      console.log('Generating QR code for class:', classId);
-      console.log('Using API URL:', api.defaults.baseURL);
-      
+      // Get current user and token
+      const currentUser = await authAPI.getCurrentUser();
       const token = await AsyncStorage.getItem('token');
+      
       if (!token) {
         throw new Error('No authentication token found');
       }
+
+      if (!currentUser || !currentUser.role) {
+        throw new Error('User role not found');
+      }
+
+      // Ensure role is one of the valid values
+      if (!['student', 'instructor', 'admin'].includes(currentUser.role)) {
+        throw new Error(`Invalid role: ${currentUser.role}`);
+      }
+
+      // Include userRole in request body
+      const requestData = {
+        ...data,
+        userRole: currentUser.role,
+        instructorId: currentUser._id
+      };
       
-      const response = await api.post('/qr/generate', { classId });
+      console.log('Current user data:', {
+        id: currentUser._id,
+        role: currentUser.role,
+        username: currentUser.username
+      });
+      console.log('Marking attendance with data:', JSON.stringify(requestData));
+      
+      const response = await api.post('/api/qr/mark-attendance', requestData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'x-user-role': currentUser.role
+        }
+      });
+      
       return response.data;
     } catch (error) {
-      console.error('Error generating QR code:', error);
-      throw error;
-    }
-  },
-  
-  validateQRCode: async (token: string) => {
-    try {
-      const response = await api.post('/qr/validate', { token });
-      return response.data;
-    } catch (error) {
-      console.error('Error validating QR code:', error);
+      console.error('Error marking attendance via QR:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error('Server response:', {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.config?.headers,
+          requestData: error.response.config?.data
+        });
+      }
       throw error;
     }
   },
 
-  testConnection: async () => {
+  // Test connection to the server
+  async testConnection(): Promise<boolean> {
     try {
-      const response = await api.get('/qr/test');
+      const response = await api.get('/api/qr/test');
       return true;
     } catch (error) {
       console.error('QR API connection test failed:', error);

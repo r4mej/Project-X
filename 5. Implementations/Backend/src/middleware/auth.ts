@@ -34,11 +34,23 @@ export const authenticateToken = async (
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+    
+    // Fetch complete user data from database
+    const user = await User.findById(decoded.id).select('-password');
+    
+    if (!user) {
+      console.log('Auth middleware - User not found');
+      return res.status(401).json({ message: 'User not found' });
+    }
+
     (req as AuthenticatedRequest).user = {
-      _id: decoded.id,
-      role: decoded.role
+      _id: user._id.toString(),
+      role: user.role // Use role from database
     };
+    
     console.log('Auth middleware - Token verified successfully. User:', decoded.id);
+    console.log('Auth middleware - User role:', user.role);
+    
     next();
   } catch (err) {
     console.error('Auth middleware - Token verification failed:', err);
