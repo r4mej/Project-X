@@ -28,6 +28,7 @@ export const authenticateToken = async (
   }
 
   try {
+<<<<<<< HEAD
     const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
     
     // Fetch complete user data from database
@@ -38,14 +39,14 @@ export const authenticateToken = async (
       return res.status(401).json({ message: 'User not found' });
     }
 
+=======
+    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+>>>>>>> parent of 2942016 (Vibe coding)
     (req as AuthenticatedRequest).user = {
-      _id: user._id.toString(),
-      role: user.role // Use role from database
+      _id: decoded.id,
+      role: decoded.role
     };
-    
     console.log('Auth middleware - Token verified successfully. User:', decoded.id);
-    console.log('Auth middleware - User role:', user.role);
-    
     next();
   } catch (err) {
     console.error('Auth middleware - Token verification failed:', err);

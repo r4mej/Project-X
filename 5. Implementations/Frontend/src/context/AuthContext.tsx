@@ -1,7 +1,13 @@
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
-import { User } from '../types';
+
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+  role: 'student' | 'instructor' | 'admin';
+  userId: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -22,6 +28,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Check if user is logged in on mount
   useEffect(() => {
     const checkLoggedIn = async () => {
+<<<<<<< HEAD
       console.log('[AuthProvider] Checking login status...'); // Debug log
       try {
         const token = await AsyncStorage.getItem('token');
@@ -40,7 +47,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.error('[AuthProvider] Error checking login status:', err);
       } finally {
         setLoading(false);
+=======
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const userData = await authAPI.getCurrentUser();
+          setUser(userData);
+        } catch (err) {
+          localStorage.removeItem('token');
+        }
+>>>>>>> parent of 2942016 (Vibe coding)
       }
+      setLoading(false);
     };
 
     checkLoggedIn();
@@ -52,8 +70,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('[AuthProvider] Attempting login...'); // Debug log
       setError(null);
       const data = await authAPI.login(username, password);
+<<<<<<< HEAD
       console.log('[AuthProvider] Login successful:', data); // Debug log
       await AsyncStorage.setItem('token', data.token);
+=======
+      localStorage.setItem('token', data.token);
+>>>>>>> parent of 2942016 (Vibe coding)
       setUser(data);
     } catch (err: any) {
       console.error('[AuthProvider] Login error:', err); // Debug log
@@ -67,13 +89,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('[AuthProvider] Attempting logout...'); // Debug log
       await authAPI.logout();
+<<<<<<< HEAD
       await AsyncStorage.removeItem('token');
+=======
+      // Clear local auth state only after successful logout
+      localStorage.removeItem('token');
+>>>>>>> parent of 2942016 (Vibe coding)
       setUser(null);
       console.log('[AuthProvider] Logout successful'); // Debug log
     } catch (err: any) {
       console.error('[AuthProvider] Logout error:', err);
       if (!err.response || err.response.status >= 500) {
-        await AsyncStorage.removeItem('token');
+        localStorage.removeItem('token');
         setUser(null);
       }
       throw err;

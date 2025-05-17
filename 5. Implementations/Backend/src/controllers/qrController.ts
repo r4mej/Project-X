@@ -1,16 +1,21 @@
-import jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
+import jwt from 'jsonwebtoken';
+import Attendance from '../models/Attendance';
 import { JWT_SECRET } from '../config';
 import { startOfDay, endOfDay } from 'date-fns';
+<<<<<<< HEAD
 import Class, { IClass } from '../models/Class';
 import Attendance from '../models/Attendance';
 import { Types } from 'mongoose';
 import Student from '../models/Student';
 import User from '../models/User';
+=======
+>>>>>>> parent of 2942016 (Vibe coding)
 
 interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
+<<<<<<< HEAD
     role: string;
     userId?: string;  // Add userId for registration number
   };
@@ -23,6 +28,12 @@ interface QRTokenPayload {
   type: 'attendance';
 }
 
+=======
+    role?: string;
+  };
+}
+
+>>>>>>> parent of 2942016 (Vibe coding)
 // Generate a QR code token for a specific class
 export const generateQRCode = async (req: Request, res: Response) => {
   try {
@@ -198,6 +209,7 @@ export const validateQRCode = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+<<<<<<< HEAD
 };
 
 // Mark attendance using student QR code
@@ -290,4 +302,6 @@ export const markAttendance = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+=======
+>>>>>>> parent of 2942016 (Vibe coding)
 }; 

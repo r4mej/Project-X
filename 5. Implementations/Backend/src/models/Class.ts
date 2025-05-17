@@ -15,7 +15,6 @@ export interface IClass extends Document {
   course: string;
   room: string;
   yearSection: string;
-  instructor: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,7 +22,7 @@ export interface IClass extends Document {
 const TimeSlotSchema = new Schema({
   days: [{
     type: String,
-    enum: ['SU', 'M', 'T', 'W', 'TH', 'F', 'S'],
+    enum: ['M', 'T', 'W', 'TH', 'F', 'S'],
     required: true
   }],
   startTime: {
@@ -74,11 +73,6 @@ const ClassSchema: Schema = new Schema({
     type: String,
     required: true,
     trim: true,
-  },
-  instructor: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
   }
 }, {
   timestamps: true

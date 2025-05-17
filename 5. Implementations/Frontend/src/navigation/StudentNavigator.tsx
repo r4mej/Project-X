@@ -7,15 +7,11 @@ import { Alert, Animated, Dimensions, Image, StyleSheet, Switch, Text, Touchable
 import ConfirmationModal from '../components/ConfirmationModal';
 import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
-import StudentQRScreen from '../screens/StudentQRScreen';
+import QRScanScreen from '../screens/QRScanScreen';
 import RecordsScreen from '../screens/RecordsScreen';
 import StudentDashboard from '../screens/StudentScreen';
-import LocationScreen from '../screens/LocationScreen';
-import HistoryScreen from '../screens/HistoryScreen';
-import ScheduleScreen from '../screens/ScheduleScreen';
 import { StudentDrawerParamList } from './types';
 import { colors } from '../theme/colors';
-import * as ImagePicker from 'expo-image-picker';
 
 const Drawer = createDrawerNavigator<StudentDrawerParamList>();
 const Tab = createBottomTabNavigator();
@@ -62,6 +58,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -99,32 +96,9 @@ const CustomDrawerContent = ({ navigation }: any) => {
     }
   };
 
-  const handleImageUpload = async () => {
-    try {
-      // Request permission
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Please grant permission to access your photos');
-        return;
-      }
-
-      // Pick the image
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        setProfileImage(imageUri);
-        await saveProfileImage(imageUri);
-        showSuccessNotification('Profile picture updated successfully');
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+  const handleImageUpload = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
   };
 
@@ -134,6 +108,30 @@ const CustomDrawerContent = ({ navigation }: any) => {
     setTimeout(() => {
       setShowNotification(false);
     }, 2000);
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        Alert.alert('Error', 'Image size should be less than 5MB');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        Alert.alert('Error', 'Please upload an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const imageUri = e.target?.result as string;
+        setProfileImage(imageUri);
+        await saveProfileImage(imageUri);
+        showSuccessNotification('Profile picture updated successfully');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleRemoveImage = async () => {
@@ -215,6 +213,13 @@ const CustomDrawerContent = ({ navigation }: any) => {
             <Text style={styles.role}>{user?.role?.toUpperCase() || 'STUDENT'}</Text>
             <Text style={styles.email}>{user?.userId || 'No ID'}</Text>
           </View>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
         </View>
         <TouchableOpacity
           style={styles.closeButton}
@@ -367,7 +372,7 @@ const TabNavigator = () => {
         })}
       >
         <Tab.Screen 
-          name="Dashboard" 
+          name="Home" 
           component={StudentDashboard}
           options={{
             tabBarIcon: ({ focused }) => (
@@ -375,19 +380,19 @@ const TabNavigator = () => {
             ),
           }}
           listeners={{
-            tabPress: () => handleTabPress(0, 'Dashboard'),
+            tabPress: () => handleTabPress(0, 'Home'),
           }}
         />
         <Tab.Screen 
-          name="QRScanner" 
-          component={StudentQRScreen}
+          name="QR Scan" 
+          component={QRScanScreen}
           options={{
             tabBarIcon: ({ focused }) => (
               <TabIcon name="qr-code" focused={focused} />
             ),
           }}
           listeners={{
-            tabPress: () => handleTabPress(1, 'QRScanner'),
+            tabPress: () => handleTabPress(1, 'QR Scan'),
           }}
         />
         <Tab.Screen 
@@ -437,17 +442,48 @@ const StudentNavigator = () => {
       }}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
     >
-      <Drawer.Screen name="MainTabs" component={TabNavigator} />
-      <Drawer.Screen name="QRScanner" component={StudentQRScreen} />
-      <Drawer.Screen name="Location" component={LocationScreen} />
-      <Drawer.Screen name="History" component={HistoryScreen} />
-      <Drawer.Screen name="Schedule" component={ScheduleScreen} />
-      <Drawer.Screen name="Records" component={RecordsScreen} />
-      <Drawer.Screen name="EditProfile" component={StudentDashboard} />
-      <Drawer.Screen name="AttendanceSettings" component={StudentDashboard} />
-      <Drawer.Screen name="PrivacySecurity" component={StudentDashboard} />
-      <Drawer.Screen name="HelpSupport" component={StudentDashboard} />
-      <Drawer.Screen name="AboutApp" component={StudentDashboard} />
+      <Drawer.Screen 
+        name="Dashboard" 
+        component={TabNavigator}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
+      <Drawer.Screen 
+        name="EditProfile" 
+        component={StudentDashboard}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
+      <Drawer.Screen 
+        name="AttendanceSettings" 
+        component={StudentDashboard}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
+      <Drawer.Screen 
+        name="PrivacySecurity" 
+        component={StudentDashboard}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
+      <Drawer.Screen 
+        name="HelpSupport" 
+        component={StudentDashboard}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
+      <Drawer.Screen 
+        name="AboutApp" 
+        component={StudentDashboard}
+        options={{
+          swipeEnabled: true,
+        }}
+      />
     </Drawer.Navigator>
   );
 };

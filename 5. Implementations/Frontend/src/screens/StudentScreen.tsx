@@ -1,108 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React from 'react';
+import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { StudentDrawerParamList } from '../navigation/types';
-import { studentAPI } from '../services/api';
 import { colors } from '../theme/colors';
 
-type NavigationProp = DrawerNavigationProp<StudentDrawerParamList, 'Dashboard'>;
-
-interface AttendanceOverview {
-  overall: number;
-  currentSemester: number;
-  lastSemester: number;
-}
-
-interface TodayStatus {
-  status: 'present' | 'absent' | 'late';
-  lastCheckIn?: {
-    time: string;
-    method: string;
-    location: string;
-  };
-}
-
-interface ClassInfo {
-  _id: string;
-  className: string;
-  classTime: string;
-  instructor: string;
-  status: 'present' | 'absent' | 'late' | 'pending';
-}
+type NavigationProp = DrawerNavigationProp<StudentDrawerParamList>;
 
 const StudentScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
-  const [overview, setOverview] = useState<AttendanceOverview>({
-    overall: 0,
-    currentSemester: 0,
-    lastSemester: 0
-  });
-  const [todayStatus, setTodayStatus] = useState<TodayStatus | null>(null);
-  const [todayClasses, setTodayClasses] = useState<ClassInfo[]>([]);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, [user]);
-
-  const loadDashboardData = async () => {
-    if (!user?.userId) return;
-
-    try {
-      setLoading(true);
-      const [overviewData, statusData, classesData] = await Promise.all([
-        studentAPI.getAttendanceOverview(user.userId),
-        studentAPI.getTodayStatus(user.userId),
-        studentAPI.getTodayClasses(user.userId)
-      ]);
-
-      setOverview(overviewData);
-      setTodayStatus(statusData);
-      setTodayClasses(classesData);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
+  const getHeaderTitle = () => {
+    return 'Student Dashboard';
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present':
-        return colors.status.success;
-      case 'absent':
-        return colors.status.error;
-      case 'late':
-        return colors.status.warning;
-      default:
-        return colors.status.info;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'checkmark-circle';
-      case 'absent':
-        return 'close-circle';
-      case 'late':
-        return 'time';
-      default:
-        return 'help-circle';
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.student.primary.main} />
-      </View>
-    );
-  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -114,7 +27,7 @@ const StudentScreen: React.FC = () => {
           >
             <Ionicons name="menu" size={28} color={colors.text.inverse} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Student Dashboard</Text>
+          <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
         </View>
         {user?.userId && (
           <View style={styles.studentIdContainer}>
@@ -131,23 +44,23 @@ const StudentScreen: React.FC = () => {
             <Text style={styles.cardTitle}>Attendance Overview</Text>
             <Text style={styles.subTitle}>Your current attendance statistics</Text>
             <View style={styles.attendanceCircle}>
-              <Text style={styles.attendancePercentage}>{overview.overall}%</Text>
+              <Text style={styles.attendancePercentage}>78%</Text>
               <Text style={styles.attendanceLabel}>Overall</Text>
             </View>
             <View style={styles.semesterStats}>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>This Semester</Text>
                 <View style={styles.progressBar}>
-                  <View style={[styles.progress, { width: `${overview.currentSemester}%` }]} />
+                  <View style={[styles.progress, { width: '78%' }]} />
                 </View>
-                <Text style={styles.statPercentage}>{overview.currentSemester}%</Text>
+                <Text style={styles.statPercentage}>78%</Text>
               </View>
               <View style={styles.statRow}>
                 <Text style={styles.statLabel}>Last Semester</Text>
                 <View style={styles.progressBar}>
-                  <View style={[styles.progress, { width: `${overview.lastSemester}%` }]} />
+                  <View style={[styles.progress, { width: '85%' }]} />
                 </View>
-                <Text style={styles.statPercentage}>{overview.lastSemester}%</Text>
+                <Text style={styles.statPercentage}>85%</Text>
               </View>
             </View>
           </View>
@@ -157,59 +70,36 @@ const StudentScreen: React.FC = () => {
             <Text style={styles.cardTitle}>Today's Status</Text>
             <Text style={styles.subTitle}>Your attendance for today</Text>
             <View style={styles.statusContainer}>
-              {todayStatus ? (
-                <>
-                  <View style={styles.statusIconContainer}>
-                    <Ionicons 
-                      name={getStatusIcon(todayStatus.status)} 
-                      size={48} 
-                      color={getStatusColor(todayStatus.status)} 
-                    />
-                  </View>
-                  <Text style={[styles.statusText, { color: getStatusColor(todayStatus.status) }]}>
-                    {todayStatus.status.charAt(0).toUpperCase() + todayStatus.status.slice(1)}
-                  </Text>
-                  {todayStatus.lastCheckIn && (
-                    <View style={styles.checkInInfo}>
-                      <Text style={styles.checkInLabel}>Last Check-in:</Text>
-                      <Text style={styles.checkInTime}>{todayStatus.lastCheckIn.time}</Text>
-                      <Text style={styles.checkInMethod}>Method: {todayStatus.lastCheckIn.method}</Text>
-                      <Text style={styles.checkInLocation}>Location: {todayStatus.lastCheckIn.location}</Text>
-                    </View>
-                  )}
-                </>
-              ) : (
-                <Text style={styles.noStatusText}>No attendance recorded for today</Text>
-              )}
+              <View style={styles.statusIconContainer}>
+                <Ionicons name="checkmark-circle" size={48} color={colors.status.success} />
+              </View>
+              <Text style={styles.statusText}>Present</Text>
+              <Text style={styles.statusInfo}>You've been marked present for today.</Text>
+              <View style={styles.checkInInfo}>
+                <Text style={styles.checkInLabel}>Last Check-in:</Text>
+                <Text style={styles.checkInTime}>10:05 AM</Text>
+                <Text style={styles.checkInMethod}>Method: QR Code Scan</Text>
+                <Text style={styles.checkInLocation}>Location: Room 101</Text>
+              </View>
             </View>
           </View>
 
           {/* Today's Classes Card */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Today's Classes</Text>
-            {todayClasses.length > 0 ? (
-              todayClasses.map((classInfo) => (
-                <View key={classInfo._id} style={styles.classItem}>
-                  <View style={styles.classInfo}>
-                    <Text style={styles.className}>{classInfo.className}</Text>
-                    <Text style={styles.classTime}>{classInfo.classTime}</Text>
-                    <Text style={styles.classLocation}>{classInfo.instructor}</Text>
-                  </View>
-                  <View style={styles.attendanceStatus}>
-                    <Ionicons 
-                      name={getStatusIcon(classInfo.status)} 
-                      size={24} 
-                      color={getStatusColor(classInfo.status)} 
-                    />
-                    <Text style={[styles.statusLabel, { color: getStatusColor(classInfo.status) }]}>
-                      {classInfo.status.charAt(0).toUpperCase() + classInfo.status.slice(1)}
-                    </Text>
-                  </View>
+            {[1, 2, 3, 4].map((index) => (
+              <View key={index} style={styles.classItem}>
+                <View style={styles.classInfo}>
+                  <Text style={styles.className}>ITM503</Text>
+                  <Text style={styles.classTime}>09:00 AM - 10:30 AM</Text>
+                  <Text style={styles.classLocation}>Prof Unknown</Text>
                 </View>
-              ))
-            ) : (
-              <Text style={styles.noClassesText}>No classes scheduled for today</Text>
-            )}
+                <View style={styles.attendanceStatus}>
+                  <Ionicons name="checkmark-circle" size={24} color={colors.status.success} />
+                  <Text style={styles.statusLabel}>Present</Text>
+                </View>
+              </View>
+            ))}
           </View>
 
           {/* Quick Actions Card */}
@@ -217,33 +107,21 @@ const StudentScreen: React.FC = () => {
             <Text style={styles.cardTitle}>Quick Actions</Text>
             <Text style={styles.subTitle}>Common attendance tasks</Text>
             <View style={styles.actionButtons}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('QRScanner')}
-              >
-                <Ionicons name="qr-code" size={24} color={colors.student.primary.main} />
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="qr-code" size={24} color="#2eada6" />
                 <Text style={styles.actionText}>Scan QR Code</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Location')}
-              >
-                <Ionicons name="location" size={24} color={colors.student.primary.main} />
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="location" size={24} color="#2eada6" />
                 <Text style={styles.actionText}>GPS Attendance</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('History')}
-              >
-                <Ionicons name="document-text" size={24} color={colors.student.primary.main} />
-                <Text style={styles.actionText}>View History</Text>
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="document-text" size={24} color="#2eada6" />
+                <Text style={styles.actionText}>View Attendance History</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('Schedule')}
-              >
-                <Ionicons name="calendar" size={24} color={colors.student.primary.main} />
-                <Text style={styles.actionText}>Schedule</Text>
+              <TouchableOpacity style={styles.actionButton}>
+                <Ionicons name="calendar" size={24} color="#2eada6" />
+                <Text style={styles.actionText}>Class Schedule</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -504,24 +382,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.inverse,
     fontWeight: '600',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.neutral.background,
-  },
-  noStatusText: {
-    textAlign: 'center',
-    color: colors.text.secondary,
-    fontSize: 16,
-    marginVertical: 20,
-  },
-  noClassesText: {
-    textAlign: 'center',
-    color: colors.text.secondary,
-    fontSize: 16,
-    marginVertical: 20,
   },
 });
 

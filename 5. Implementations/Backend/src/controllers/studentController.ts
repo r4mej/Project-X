@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+<<<<<<< HEAD
 import Student, { IStudent } from '../models/Student';
 import Class, { IClass, ITimeSlot } from '../models/Class';
 import Attendance from '../models/Attendance';
@@ -18,6 +19,9 @@ interface IUser extends Document {
   firstName?: string;
   middleInitial?: string;
 }
+=======
+import Student from '../models/Student';
+>>>>>>> parent of 2942016 (Vibe coding)
 
 export const getStudentsByClass = async (req: Request, res: Response) => {
   try {
@@ -29,14 +33,14 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
       .exec();
 
     res.json(students);
-  } catch (error) {
-    console.error('Error fetching students:', error);
-    res.status(500).json({ message: 'Error fetching students', error });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
   }
 };
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
     const { classId, studentId, username } = req.body;
 
     // Validate required fields
@@ -108,11 +112,20 @@ export const addStudent = async (req: Request, res: Response) => {
       });
     }
     res.status(500).json({ message: 'Server error', error: error.message });
+=======
+    const { classId, studentId, surname, firstName, middleInitial } = req.body;
+    const student = new Student({ classId, studentId, surname, firstName, middleInitial });
+    await student.save();
+    res.status(201).json(student);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+>>>>>>> parent of 2942016 (Vibe coding)
   }
 };
 
 export const updateStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
     const { studentId, username } = req.body;
 
     // Validate required fields
@@ -142,11 +155,23 @@ export const updateStudent = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error in updateStudent:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
+=======
+    const { studentId, surname, firstName, middleInitial } = req.body;
+    const student = await Student.findByIdAndUpdate(
+      req.params.id,
+      { studentId, surname, firstName, middleInitial },
+      { new: true }
+    );
+    res.json(student);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+>>>>>>> parent of 2942016 (Vibe coding)
   }
 };
 
 export const deleteStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
     const { id, studentId, classId } = req.params;  // Get all possible params from URL
 
     let deletedStudent: IStudent | null = null;
@@ -330,6 +355,12 @@ export const getTodayStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching today\'s status:', error);
     res.status(500).json({ message: 'Error fetching today\'s status', error });
+=======
+    await Student.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Student deleted' });
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+>>>>>>> parent of 2942016 (Vibe coding)
   }
 };
 
