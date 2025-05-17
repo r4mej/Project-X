@@ -2,47 +2,46 @@ import bcrypt from 'bcryptjs';
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUser extends Document {
+  userId: string;  // Registration number for students
   username: string;
   email: string;
   password: string;
-  role: 'student' | 'instructor' | 'admin';
-  userId: string;
+  role: 'student' | 'teacher' | 'admin';
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const UserSchema: Schema = new Schema({
+  userId: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
   username: {
     type: String,
     required: true,
     unique: true,
-    trim: true,
+    trim: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    lowercase: true,
+    trim: true
   },
   password: {
     type: String,
-    required: true,
+    required: true
   },
   role: {
     type: String,
-    enum: ['student', 'instructor', 'admin'],
-    default: 'student',
-  },
-  userId: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-  },
+    enum: ['student', 'teacher', 'admin'],
+    required: true
+  }
 }, {
-  timestamps: true,
+  timestamps: true
 });
 
 // Hash password before saving

@@ -24,10 +24,13 @@ const ManageUser: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [username, setUsername] = useState('');
+  const [surname, setSurname] = useState('');
+  const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('student');
   const [userId, setUserId] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -36,6 +39,8 @@ const ManageUser: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: boolean }>({});
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [newUserCredentials, setNewUserCredentials] = useState<{username: string, password: string} | null>(null);
   
   useEffect(() => {
     fetchUsers();
@@ -55,19 +60,26 @@ const ManageUser: React.FC = () => {
   
   const handleAddUser = () => {
     setEditingUser(null);
-    setUsername('');
+    setSurname('');
+    setFirstName('');
     setEmail('');
     setRole('student');
     setUserId('');
+    setUsername('');
+    setPassword('');
     setModalVisible(true);
   };
   
   const handleEditUser = (user: User) => {
     setEditingUser(user);
-    setUsername(user.username);
+    const [userSurname, userFirstName] = user.username.split(',').map(part => part.trim());
+    setSurname(userSurname);
+    setFirstName(userFirstName);
     setEmail(user.email);
     setRole(user.role);
     setUserId(user.userId);
+    setUsername(user.username);
+    setPassword('');
     setModalVisible(true);
   };
   
@@ -94,7 +106,7 @@ const ManageUser: React.FC = () => {
   };
   
   const handleSaveUser = async () => {
-    if (!username || !email || !userId) {
+    if (!surname || !firstName || !email || !userId || !username) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -119,11 +131,13 @@ const ManageUser: React.FC = () => {
     }
     
     try {
+      const formattedUsername = `${surname}, ${firstName}`;
       const userData = {
-        username,
+        username: formattedUsername,
         email,
         role,
-        userId
+        userId,
+        password: password || undefined
       };
 
       if (editingUser) {
@@ -131,7 +145,7 @@ const ManageUser: React.FC = () => {
         showSuccessNotification('User updated successfully');
       } else {
         await userAPI.createUser(userData);
-        showSuccessNotification('User added successfully');
+        Alert.alert('User Created', `Username: ${formattedUsername}`);
       }
       
       setModalVisible(false);
@@ -885,10 +899,23 @@ const styles = StyleSheet.create({
                 styles.input,
                 fieldErrors.username && styles.inputError
               ]}
-              placeholder="Username"
-              value={username}
+              placeholder="Surname"
+              value={surname}
               onChangeText={(text) => {
-                setUsername(text);
+                setSurname(text);
+                setFieldErrors(prev => ({ ...prev, username: false }));
+              }}
+            />
+            
+            <TextInput
+              style={[
+                styles.input,
+                fieldErrors.username && styles.inputError
+              ]}
+              placeholder="First Name"
+              value={firstName}
+              onChangeText={(text) => {
+                setFirstName(text);
                 setFieldErrors(prev => ({ ...prev, username: false }));
               }}
             />
@@ -1003,6 +1030,36 @@ const styles = StyleSheet.create({
                 onPress={handleMultipleDelete}
               >
                 <Text style={styles.deleteModalButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Credentials Modal */}
+      <Modal
+        transparent={true}
+        visible={showCredentialsModal}
+        onRequestClose={() => setShowCredentialsModal(false)}
+        animationType="fade"
+      >
+        <View style={styles.deleteModalContainer}>
+          <View style={styles.deleteModalContent}>
+            <Text style={styles.deleteModalTitle}>User Created Successfully</Text>
+            <Text style={styles.deleteModalText}>
+              Please save these login credentials:{'\n\n'}
+              Username: {newUserCredentials?.username}{'\n'}
+              Password: {newUserCredentials?.password}
+            </Text>
+            <View style={styles.deleteModalButtons}>
+              <TouchableOpacity
+                style={[styles.deleteModalButton, styles.confirmButton]}
+                onPress={() => {
+                  setShowCredentialsModal(false);
+                  setNewUserCredentials(null);
+                }}
+              >
+                <Text style={styles.deleteModalButtonText}>Got it</Text>
               </TouchableOpacity>
             </View>
           </View>

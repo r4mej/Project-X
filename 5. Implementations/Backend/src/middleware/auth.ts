@@ -3,12 +3,7 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config';
 import User from '../models/User';
 
-interface UserPayload {
-  id: string;
-  role?: string;
-}
-
-interface AuthenticatedRequest extends Request {
+export interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
     role?: string;
@@ -33,7 +28,7 @@ export const authenticateToken = async (
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
     
     // Fetch complete user data from database
     const user = await User.findById(decoded.id).select('-password');
@@ -68,7 +63,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as UserPayload;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as { id: string };
     
     // Find user by id
     const user = await User.findById(decoded.id).select('-password');

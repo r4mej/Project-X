@@ -5,45 +5,37 @@ import { UserRole } from '../navigation/types';
 
 // Get the local IP address for Android
 const getLocalIPAddress = () => {
-  // Common local network IPs to try
-  return [
-    '192.168.31.191',  // Your current IP
-    '192.168.1.100',
-    '192.168.0.100',
-    '192.168.1.1',
-    '192.168.0.1',
-    '10.0.2.2',        // Android emulator
-    'localhost',
-    '127.0.0.1'
-  ];
+  if (Platform.OS === 'android') {
+    // Comprehensive list of common local network IPs
+    return [
+      '192.168.31.191',  // Your specific network IP
+      '192.168.1.100',
+      '192.168.0.100',
+      '192.168.1.1',     // Common router IPs
+      '192.168.0.1',
+      '10.0.2.2',        // Android emulator
+      'localhost',       // For some Android setups
+      '127.0.0.1'       // Localhost alternative
+    ];
+  } else if (Platform.OS === 'ios') {
+    return ['localhost'];
+  } else {
+    return ['localhost'];
+  }
 };
 
 // Allow both HTTP and HTTPS options with fallbacks
-// Try different connection options
 const API_URLS = (() => {
   const ips = getLocalIPAddress();
-  const urls = [];
-
-  if (Platform.OS === 'android') {
-    // For Android, try all local IPs
-    urls.push(...ips.map(ip => `http://${ip}:5000/api`));
-  } else if (Platform.OS === 'ios') {
-    // For iOS, localhost should work
-    urls.push('http://localhost:5000/api');
-  } else {
-    // For web
-    urls.push('http://localhost:5000/api');
-  }
-
-  return urls;
+  return ips.map(ip => `http://${ip}:5000/api`);
 })();
 
 // Maximum number of retries for failed requests
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000; // 1 second
+const MAX_RETRIES = 2;  // Keep reduced retry count
+const RETRY_DELAY = 2000; // Keep increased delay
 
-// Increase timeout for mobile devices
-const TIMEOUT = Platform.OS === 'web' ? 10000 : 30000; // 30 seconds for mobile
+// Timeout configuration
+const TIMEOUT = Platform.OS === 'web' ? 10000 : 20000; // Adjusted for mobile
 
 // Create axios instance with the first URL
 const api = axios.create({
@@ -96,7 +88,12 @@ const retryRequest = async (config: any, retryCount = 0): Promise<any> => {
     }
     
     // Only retry on network errors or 5xx server errors
-    if (axios.isAxiosError(error) && (!error.response || (error.response.status >= 500 && error.response.status < 600))) {
+    // Do not retry on 404s or other client errors
+    if (axios.isAxiosError(error) && (
+      !error.response || 
+      (error.response.status >= 500 && error.response.status < 600) ||
+      error.code === 'ECONNABORTED'
+    )) {
       console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
       return retryRequest(config, retryCount + 1);
@@ -117,8 +114,13 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
     
-    // Network error or timeout or server error
-    if (!error.response || error.code === 'ECONNABORTED' || (error.response.status >= 500 && error.response.status < 600)) {
+    // Only retry on network errors, timeouts, or server errors
+    // Do not retry on 404s or other client errors
+    if (
+      !error.response || 
+      error.code === 'ECONNABORTED' || 
+      (error.response.status >= 500 && error.response.status < 600)
+    ) {
       originalRequest._retry = true;
       return retryRequest(originalRequest);
     }
@@ -290,7 +292,7 @@ export const classAPI = {
 export interface Student {
   _id: string;
   classId: string;
-  studentId: string;
+  studentId: string;  // Registration number (e.g., 2023-2570)
   surname: string;
   firstName: string;
   middleInitial?: string;
@@ -305,12 +307,12 @@ export const studentAPI = {
     const res = await api.post<Student>('/students', student);
     return res.data;
   },
-  updateStudent: async (id: string, student: Partial<Student>) => {
-    const res = await api.put<Student>(`/students/${id}`, student);
+  updateStudent: async (studentId: string, student: Partial<Student>) => {
+    const res = await api.put<Student>(`/students/${studentId}`, student);
     return res.data;
   },
-  deleteStudent: async (id: string) => {
-    await api.delete(`/students/${id}`);
+  deleteStudent: async (studentId: string, classId: string) => {
+    await api.delete(`/students/${studentId}`);
   },
   // Get today's classes for a student
   getTodayClasses: async (studentId: string): Promise<any> => {
@@ -662,13 +664,13 @@ export const reportAPI = {
 export const qrAPI = {
   // Generate QR code for a class
   async generateQRCode(classId: string): Promise<any> {
-    const response = await api.post('/api/qr/generate', { classId });
+    const response = await api.post('/qr/generate', { classId });
     return response.data;
   },
 
   // Validate QR code token
   async validateQRCode(token: string): Promise<any> {
-    const response = await api.post('/api/qr/validate', { token });
+    const response = await api.post('/qr/validate', { token });
     return response.data;
   },
 
@@ -710,7 +712,7 @@ export const qrAPI = {
       });
       console.log('Marking attendance with data:', JSON.stringify(requestData));
       
-      const response = await api.post('/api/qr/mark-attendance', requestData, {
+      const response = await api.post('/qr/mark-attendance', requestData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -736,7 +738,7 @@ export const qrAPI = {
   // Test connection to the server
   async testConnection(): Promise<boolean> {
     try {
-      const response = await api.get('/api/qr/test');
+      const response = await api.get('/qr/test');
       return true;
     } catch (error) {
       console.error('QR API connection test failed:', error);
