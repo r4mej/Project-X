@@ -6,10 +6,20 @@ import { UserRole } from '../navigation/types';
 // Allow both HTTP and HTTPS options with fallbacks
 // Try different connection options
 const API_URLS = [
-  'http://localhost:5000/api',    // Standard localhost
-  'http://127.0.0.1:5000/api',    // IP address version
+  Platform.OS === 'web' 
+    ? 'http://localhost:5000/api'
+    : 'http://10.0.2.2:5000/api',    // Android emulator localhost
+  Platform.OS === 'web'
+    ? 'http://127.0.0.1:5000/api'
+    : 'http://localhost:5000/api',    // iOS simulator
   'https://localhost:5000/api',   // HTTPS version (if enabled)
+  'http://192.168.1.1:5000/api',  // Common local network IP
+  'http://192.168.0.1:5000/api',  // Alternative local network IP
 ];
+
+// Maximum number of retries for failed requests
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 1000; // 1 second
 
 // Create axios instance
 const api = axios.create({
@@ -32,9 +42,19 @@ const tryAlternativeUrls = async (config: any, originalError: any) => {
     try {
       console.log(`Trying alternative API URL: ${API_URLS[i]}`);
       const newConfig = { ...config, baseURL: API_URLS[i] };
-      return await axios(newConfig);
-    } catch (error) {
-      console.log(`Alternative URL ${API_URLS[i]} failed too`);
+      const response = await axios(newConfig);
+      
+      // If successful, update the default baseURL
+      api.defaults.baseURL = API_URLS[i];
+      console.log(`Successfully switched to ${API_URLS[i]}`);
+      
+      return response;
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.log(`Alternative URL ${API_URLS[i]} failed too:`, error.message);
+      } else {
+        console.log(`Alternative URL ${API_URLS[i]} failed too: Unknown error`);
+      }
     }
   }
   
@@ -42,15 +62,43 @@ const tryAlternativeUrls = async (config: any, originalError: any) => {
   return Promise.reject(originalError);
 };
 
+// Add retry mechanism with exponential backoff
+const retryRequest = async (config: any, retryCount = 0): Promise<any> => {
+  try {
+    return await axios(config);
+  } catch (error: unknown) {
+    if (retryCount >= MAX_RETRIES) {
+      return tryAlternativeUrls(config, error);
+    }
+    
+    // Only retry on network errors or 5xx server errors
+    if (axios.isAxiosError(error) && (!error.response || (error.response.status >= 500 && error.response.status < 600))) {
+      console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
+      return retryRequest(config, retryCount + 1);
+    }
+    
+    throw error;
+  }
+};
+
 // Add error handling and retry mechanism
 api.interceptors.response.use(
   response => response,
   async error => {
-    // Network error or timeout
-    if (!error.response || error.code === 'ECONNABORTED') {
-      console.log('Connection error, trying alternative URLs');
-      return tryAlternativeUrls(error.config, error);
+    const originalRequest = error.config;
+    
+    // Prevent infinite retry loops
+    if (originalRequest._retry) {
+      return Promise.reject(error);
     }
+    
+    // Network error or timeout or server error
+    if (!error.response || error.code === 'ECONNABORTED' || (error.response.status >= 500 && error.response.status < 600)) {
+      originalRequest._retry = true;
+      return retryRequest(originalRequest);
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -555,6 +603,46 @@ export const reportAPI = {
     } catch (error) {
       console.error('Error deleting report:', error);
       throw error;
+    }
+  }
+};
+
+export const qrAPI = {
+  generateQRCode: async (classId: string) => {
+    try {
+      console.log('Generating QR code for class:', classId);
+      console.log('Using API URL:', api.defaults.baseURL);
+      
+      const token = await AsyncStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
+      const response = await api.post('/qr/generate', { classId });
+      return response.data;
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      throw error;
+    }
+  },
+  
+  validateQRCode: async (token: string) => {
+    try {
+      const response = await api.post('/qr/validate', { token });
+      return response.data;
+    } catch (error) {
+      console.error('Error validating QR code:', error);
+      throw error;
+    }
+  },
+
+  testConnection: async () => {
+    try {
+      const response = await api.get('/qr/test');
+      return true;
+    } catch (error) {
+      console.error('QR API connection test failed:', error);
+      return false;
     }
   }
 };

@@ -5,6 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { StudentDrawerParamList } from '../navigation/types';
+import { colors } from '../theme/colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 type NavigationProp = DrawerNavigationProp<StudentDrawerParamList>;
 
@@ -74,13 +76,13 @@ const RecordsScreen: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Present':
-        return '#4CAF50';
+        return colors.student.success;
       case 'Absent':
-        return '#FF6B6B';
+        return colors.student.error;
       case 'Late':
-        return '#FFA726';
+        return colors.student.warning;
       default:
-        return '#666';
+        return colors.text.secondary;
     }
   };
 
@@ -162,17 +164,20 @@ const RecordsScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.headerContainer}>
+      <LinearGradient
+        colors={[colors.student.primary.main, colors.student.primary.dark]}
+        style={styles.headerContainer}
+      >
         <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.menuButton}
             onPress={() => navigation.toggleDrawer()}
           >
-            <Ionicons name="menu" size={28} color="white" />
+            <Ionicons name="menu" size={28} color={colors.text.inverse} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Attendance Records</Text>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
@@ -314,18 +319,15 @@ const RecordsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.student.primary.main,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.neutral.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
     padding: 20,
     paddingTop: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerContent: {
     flexDirection: 'row',
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     flex: 1,
     textAlign: 'right',
   },
@@ -349,7 +351,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     marginBottom: 16,
   },
   filtersContainer: {
@@ -360,14 +362,20 @@ const styles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 8,
-    borderRadius: 8,
+    backgroundColor: colors.surface.card,
+    padding: 12,
+    borderRadius: 12,
     gap: 8,
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   filterButtonText: {
-    color: '#666',
+    color: colors.text.secondary,
     fontSize: 14,
+    fontWeight: '500',
   },
   overviewContainer: {
     flexDirection: 'row',
@@ -376,36 +384,47 @@ const styles = StyleSheet.create({
   },
   overviewCard: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: colors.surface.card,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   overviewLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     marginBottom: 8,
   },
   overviewValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.student.primary.main,
   },
   summaryCard: {
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: colors.surface.card,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 16,
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+    color: colors.text.primary,
+    marginBottom: 16,
   },
   legendContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginTop: 12,
   },
   legendItem: {
     flexDirection: 'row',
@@ -419,18 +438,23 @@ const styles = StyleSheet.create({
   },
   legendText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
   },
   logContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text.primary,
     padding: 16,
     paddingBottom: 8,
   },
@@ -440,7 +464,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
+    color: colors.text.secondary,
     fontSize: 14,
   },
   emptyContainer: {
@@ -449,21 +473,21 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     marginTop: 12,
-    color: '#666',
+    color: colors.text.secondary,
     fontSize: 14,
   },
   logHeader: {
     flexDirection: 'row',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.neutral.lightGray,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border.light,
   },
   columnHeader: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: colors.text.secondary,
   },
   logRow: {
     flexDirection: 'row',
@@ -471,11 +495,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border.light,
   },
   logText: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text.primary,
   },
   statusBadge: {
     flex: 1,
@@ -485,18 +509,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statusText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
   statisticsContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: colors.surface.card,
+    borderRadius: 16,
     padding: 16,
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statisticsSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     marginBottom: 16,
     paddingHorizontal: 16,
   },
@@ -519,12 +548,12 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 14,
-    color: '#333',
+    color: colors.text.primary,
   },
   progressBarContainer: {
     flex: 1,
     height: 8,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.neutral.lightGray,
     borderRadius: 4,
     marginHorizontal: 12,
   },
@@ -534,7 +563,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 12,
-    color: '#666',
+    color: colors.text.secondary,
     width: 100,
     textAlign: 'right',
   },

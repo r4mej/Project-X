@@ -6,6 +6,7 @@ import attendanceRoutes from './routes/attendanceRoutes';
 import authRoutes from './routes/authRoutes';
 import classRoutes from './routes/classRoutes';
 import logRoutes from './routes/logRoutes';
+import qrRoutes from './routes/qrRoutes';
 import reportRoutes from './routes/reportRoutes';
 import studentRoutes from './routes/studentRoutes';
 import userRoutes from './routes/userRoutes';
@@ -31,6 +32,7 @@ app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/qr', qrRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -49,7 +51,8 @@ app.get('/api/test', (req, res) => {
       '/api/classes',
       '/api/students',
       '/api/attendance',
-      '/api/reports'
+      '/api/reports',
+      '/api/qr'
     ]
   });
 });

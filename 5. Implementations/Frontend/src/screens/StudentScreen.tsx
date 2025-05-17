@@ -5,6 +5,7 @@ import React from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { StudentDrawerParamList } from '../navigation/types';
+import { colors } from '../theme/colors';
 
 type NavigationProp = DrawerNavigationProp<StudentDrawerParamList>;
 
@@ -24,7 +25,7 @@ const StudentScreen: React.FC = () => {
             style={styles.menuButton}
             onPress={() => navigation.toggleDrawer()}
           >
-            <Ionicons name="menu" size={28} color="white" />
+            <Ionicons name="menu" size={28} color={colors.text.inverse} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
         </View>
@@ -70,7 +71,7 @@ const StudentScreen: React.FC = () => {
             <Text style={styles.subTitle}>Your attendance for today</Text>
             <View style={styles.statusContainer}>
               <View style={styles.statusIconContainer}>
-                <Ionicons name="checkmark-circle" size={48} color="#4CAF50" />
+                <Ionicons name="checkmark-circle" size={48} color={colors.status.success} />
               </View>
               <Text style={styles.statusText}>Present</Text>
               <Text style={styles.statusInfo}>You've been marked present for today.</Text>
@@ -94,7 +95,7 @@ const StudentScreen: React.FC = () => {
                   <Text style={styles.classLocation}>Prof Unknown</Text>
                 </View>
                 <View style={styles.attendanceStatus}>
-                  <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
+                  <Ionicons name="checkmark-circle" size={24} color={colors.status.success} />
                   <Text style={styles.statusLabel}>Present</Text>
                 </View>
               </View>
@@ -133,14 +134,14 @@ const StudentScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.student.primary.main,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.neutral.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.student.primary.main,
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -162,7 +163,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     textAlign: 'right',
   },
   notificationButton: {
@@ -185,159 +186,167 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   contentContainer: {
-    padding: 10,
+    padding: 16,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: colors.surface.card,
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: colors.neutral.black,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 3,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
+    color: colors.student.primary.main,
+    marginBottom: 4,
   },
   subTitle: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 16,
   },
   attendanceCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 6,
-    borderColor: '#2eada6',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    borderWidth: 8,
+    borderColor: colors.student.primary.main,
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: 16,
   },
   attendancePercentage: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.student.primary.main,
   },
   attendanceLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 4,
   },
   semesterStats: {
-    marginTop: 8,
+    marginTop: 16,
   },
   statRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   statLabel: {
-    flex: 2,
-    fontSize: 12,
-    color: '#666',
+    flex: 1,
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   progressBar: {
-    flex: 3,
-    height: 6,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 3,
-    marginHorizontal: 8,
+    flex: 2,
+    height: 8,
+    backgroundColor: colors.neutral.lightGray,
+    borderRadius: 4,
+    marginHorizontal: 12,
   },
   progress: {
     height: '100%',
-    backgroundColor: '#2eada6',
-    borderRadius: 3,
+    backgroundColor: colors.student.primary.main,
+    borderRadius: 4,
   },
   statPercentage: {
-    flex: 1,
-    fontSize: 12,
-    color: '#333',
+    width: 40,
+    fontSize: 14,
+    color: colors.student.primary.main,
     textAlign: 'right',
   },
   statusContainer: {
     alignItems: 'center',
-    padding: 8,
+    padding: 16,
   },
   statusIconContainer: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
   statusText: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 4,
+    color: colors.student.primary.main,
+    marginBottom: 8,
   },
   statusInfo: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   checkInInfo: {
     width: '100%',
-    backgroundColor: '#f8f8f8',
-    padding: 10,
-    borderRadius: 6,
+    backgroundColor: colors.neutral.lightGray,
+    borderRadius: 8,
+    padding: 12,
   },
   checkInLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
   },
   checkInTime: {
-    fontSize: 14,
+    fontSize: 16,
+    color: colors.student.primary.main,
     fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
+    marginBottom: 8,
   },
   checkInMethod: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 2,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 4,
   },
   checkInLocation: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   classItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: colors.border.light,
   },
   classInfo: {
     flex: 1,
   },
   className: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text.primary,
+    marginBottom: 4,
   },
   classTime: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 1,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginBottom: 2,
   },
   classLocation: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   attendanceStatus: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.neutral.lightGray,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   statusLabel: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#4CAF50',
+    marginLeft: 6,
+    fontSize: 14,
+    color: colors.text.primary,
+    fontWeight: '500',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -362,17 +371,17 @@ const styles = StyleSheet.create({
   studentIdContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   studentIdLabel: {
-    fontSize: 12,
-    color: 'white',
-    marginRight: 4,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginRight: 8,
   },
   studentIdValue: {
-    fontSize: 12,
-    color: 'white',
-    fontWeight: 'bold',
+    fontSize: 14,
+    color: colors.text.inverse,
+    fontWeight: '600',
   },
 });
 

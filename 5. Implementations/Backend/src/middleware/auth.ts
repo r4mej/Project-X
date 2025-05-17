@@ -5,11 +5,14 @@ import User from '../models/User';
 
 interface UserPayload {
   id: string;
-  role: string;
+  role?: string;
 }
 
 interface AuthenticatedRequest extends Request {
-  user: UserPayload;
+  user: {
+    _id: string;
+    role?: string;
+  };
 }
 
 export const authenticateToken = async (
@@ -31,7 +34,10 @@ export const authenticateToken = async (
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
-    (req as AuthenticatedRequest).user = decoded;
+    (req as AuthenticatedRequest).user = {
+      _id: decoded.id,
+      role: decoded.role
+    };
     console.log('Auth middleware - Token verified successfully. User:', decoded.id);
     next();
   } catch (err) {
@@ -50,7 +56,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as any;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as UserPayload;
     
     // Find user by id
     const user = await User.findById(decoded.id).select('-password');
@@ -60,7 +66,10 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Add user to request
-    req.user = user;
+    (req as AuthenticatedRequest).user = {
+      _id: user._id.toString(),
+      role: user.role
+    };
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token is not valid' });

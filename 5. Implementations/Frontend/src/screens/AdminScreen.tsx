@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { AdminDrawerParamList } from '../navigation/types';
+import { colors } from '../theme/colors';
 
 type NavigationProp = DrawerNavigationProp<AdminDrawerParamList>;
 
@@ -18,7 +19,7 @@ const AdminScreen: React.FC = () => {
             style={styles.menuButton}
             onPress={() => navigation.toggleDrawer()}
           >
-            <Ionicons name="menu" size={28} color="white" />
+            <Ionicons name="menu" size={28} color={colors.text.inverse} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Admin Dashboard</Text>
         </View>
@@ -34,10 +35,10 @@ const AdminScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.neutral.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.admin.primary.main,
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -59,27 +60,21 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     textAlign: 'right',
   },
   contentContainer: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
     padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   welcomeText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.admin.primary.main,
     marginBottom: 10,
-    textAlign: 'center',
   },
   instructionText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: colors.text.secondary,
   },
 });
 

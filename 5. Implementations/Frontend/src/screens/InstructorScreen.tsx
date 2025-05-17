@@ -10,6 +10,7 @@ import Reports from '../components/Reports';
 import { useAuth } from '../context/AuthContext';
 import { InstructorBottomTabParamList, InstructorDrawerParamList } from '../navigation/types';
 import { attendanceAPI, classAPI } from '../services/api';
+import { colors } from '../theme/colors';
 
 type NavigationProp = DrawerNavigationProp<InstructorDrawerParamList>;
 const Tab = createBottomTabNavigator<InstructorBottomTabParamList>();
@@ -42,7 +43,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
         <Ionicons
           name={focused ? name : `${name}-outline` as keyof typeof Ionicons.glyphMap}
           size={size}
-          color={focused ? 'white' : 'rgba(255, 255, 255, 0.6)'}
+          color={focused ? colors.text.inverse : colors.instructor.primary.light}
         />
       </Animated.View>
     </View>
@@ -176,6 +177,41 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     }
   };
 
+  const handleGenerateQR = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setShowQRModal(true);
+  };
+
+  const handleQuickGenerateQR = () => {
+    // Find the current ongoing class or the next class for today
+    const currentTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+    
+    // First, try to find an ongoing class
+    const ongoingClass = todayClasses.find(classItem =>
+      classItem.schedules.some(schedule =>
+        isTimeInRange(currentTime, `${schedule.startTime} ${schedule.startPeriod}`, `${schedule.endTime} ${schedule.endPeriod}`)
+      )
+    );
+
+    if (ongoingClass) {
+      handleGenerateQR(ongoingClass);
+      return;
+    }
+
+    // If no ongoing class, get the next upcoming class
+    const upcomingClass = todayClasses[0]; // Since todayClasses is already sorted by time
+    if (upcomingClass) {
+      handleGenerateQR(upcomingClass);
+    } else {
+      // Show alert if no classes available
+      Alert.alert(
+        'No Classes Available',
+        'There are no classes scheduled for today.',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.contentContainer}>
@@ -222,13 +258,14 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                 );
 
                 return (
-                  <View
+                  <TouchableOpacity
                     key={classItem._id}
                     style={[
                       styles.classCard,
                       { backgroundColor: isOngoing ? '#e8f5f4' : index % 2 === 0 ? '#f0e8f5' : '#fff4e6' },
                       { borderLeftColor: isOngoing ? '#2eada6' : index % 2 === 0 ? '#8a2be2' : '#ff9f43' }
                     ]}
+                    onPress={() => handleGenerateQR(classItem)}
                   >
                     <View style={styles.classHeader}>
                       <View style={styles.classCodeContainer}>
@@ -263,7 +300,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                         ))}
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             ) : (
@@ -281,11 +318,23 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
           <Text style={styles.subTitle}>Common tasks</Text>
           <View style={styles.actionButtons}>
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4' }]}
-              onPress={() => setShowQRModal(true)}
+              style={[
+                styles.actionButton, 
+                { backgroundColor: '#e8f5f4' },
+                todayClasses.length === 0 && styles.disabledButton
+              ]}
+              onPress={handleQuickGenerateQR}
+              disabled={todayClasses.length === 0}
             >
-              <Ionicons name="qr-code" size={24} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Generate QR</Text>
+              <Ionicons 
+                name="qr-code" 
+                size={24} 
+                color={todayClasses.length === 0 ? '#999' : '#2eada6'} 
+              />
+              <Text style={[
+                styles.actionText, 
+                { color: todayClasses.length === 0 ? '#999' : '#2eada6' }
+              ]}>Generate QR</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#f0e8f5' }]}>
               <Ionicons name="people" size={24} color="#8a2be2" />
@@ -386,7 +435,7 @@ const InstructorScreen: React.FC = () => {
             style={styles.menuButton}
             onPress={() => navigation.toggleDrawer()}
           >
-            <Ionicons name="menu" size={28} color="white" />
+            <Ionicons name="menu" size={28} color={colors.text.inverse} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
         </View>
@@ -397,9 +446,9 @@ const InstructorScreen: React.FC = () => {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: '#2eada6',
+              backgroundColor: colors.instructor.primary.main,
               borderTopWidth: 1,
-              borderTopColor: 'rgba(255, 255, 255, 0.2)',
+              borderTopColor: colors.instructor.primary.light,
               height: 70,
               paddingTop: 8,
               paddingBottom: 12,
@@ -475,10 +524,10 @@ const InstructorScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.neutral.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.instructor.primary.main,
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -500,7 +549,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.text.inverse,
     textAlign: 'right',
   },
   contentContainer: {
@@ -508,12 +557,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.surface.card,
     borderRadius: 15,
     padding: 20,
     alignItems: 'center',
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: colors.neutral.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
@@ -524,21 +573,21 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text.secondary,
     marginTop: 10,
   },
   instructorName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.instructor.primary.main,
     marginTop: 4,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: colors.surface.card,
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: colors.neutral.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
@@ -547,12 +596,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.instructor.primary.main,
     marginBottom: 5,
   },
   subTitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     marginBottom: 15,
   },
   overviewGrid: {
@@ -563,7 +612,7 @@ const styles = StyleSheet.create({
   },
   overviewItem: {
     width: '48%',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.neutral.lightGray,
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
@@ -572,12 +621,12 @@ const styles = StyleSheet.create({
   overviewValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: colors.instructor.primary.main,
     marginBottom: 4,
   },
   overviewLabel: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text.secondary,
     textAlign: 'center',
   },
   classList: {
@@ -681,13 +730,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   statusBadge: {
+    backgroundColor: colors.instructor.primary.main,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     marginLeft: 8,
   },
   statusText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -698,13 +748,13 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   currentDayBadge: {
-    backgroundColor: '#2eada6',
+    backgroundColor: colors.instructor.primary.main,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   currentDayText: {
-    color: 'white',
+    color: colors.text.inverse,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -728,6 +778,9 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 14,
     color: '#666',
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
 });
 
