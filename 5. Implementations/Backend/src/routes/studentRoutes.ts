@@ -24,7 +24,6 @@ router.get('/:studentId/attendance/today', getTodayStatus);
 router.post('/', addStudent);
 router.put('/:id', updateStudent);
 router.delete('/:id', deleteStudent);
-router.delete('/:studentId/class/:classId', deleteStudent);
 
 // Get all students for a class (less specific route last)
 router.get('/:classId', getStudentsByClass);

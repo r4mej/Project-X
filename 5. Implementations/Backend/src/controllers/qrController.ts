@@ -2,25 +2,31 @@ import jwt from 'jsonwebtoken';
 import { Request, Response } from 'express';
 import { JWT_SECRET } from '../config';
 import { startOfDay, endOfDay } from 'date-fns';
-import Class, { IClass } from '../models/Class';
+import Class from '../models/Class';
 import Attendance from '../models/Attendance';
 import { Types } from 'mongoose';
 import Student from '../models/Student';
-import User from '../models/User';
 
 interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
     role: string;
-    userId?: string;  // Add userId for registration number
   };
 }
 
-interface QRTokenPayload {
-  classId: string;
-  instructorId: string;
-  timestamp: string;
-  type: 'attendance';
+interface IClass {
+  _id: Types.ObjectId;
+  instructorId: Types.ObjectId;
+  className: string;
+  subjectCode: string;
+  yearSection: string;
+  schedules: Array<{
+    day: string;
+    startTime: string;
+    endTime: string;
+    startPeriod: string;
+    endPeriod: string;
+  }>;
 }
 
 // Generate a QR code token for a specific class
@@ -39,17 +45,8 @@ export const generateQRCode = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify the class exists
-    const classExists = await Class.findById(classId);
-    if (!classExists) {
-      return res.status(404).json({
-        message: 'Class not found',
-        error: 'CLASS_NOT_FOUND'
-      });
-    }
-
     // Generate a token that expires in 5 minutes
-    const payload: QRTokenPayload = {
+    const payload = {
       classId,
       instructorId,
       timestamp: new Date().toISOString(),
@@ -84,8 +81,7 @@ export const generateQRCode = async (req: Request, res: Response) => {
 export const validateQRCode = async (req: Request, res: Response) => {
   try {
     const { token } = req.body;
-    const authUser = req as AuthenticatedRequest;
-    const studentId = authUser.user.userId; // Use registration number instead of _id
+    const studentId = (req as AuthenticatedRequest).user._id;
 
     console.log('Validating QR code for student:', studentId);
 
@@ -99,7 +95,12 @@ export const validateQRCode = async (req: Request, res: Response) => {
 
     // Verify and decode the token
     console.log('Verifying token...');
-    const decoded = jwt.verify(token, JWT_SECRET) as QRTokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as {
+      classId: string;
+      instructorId: string;
+      timestamp: string;
+      type: string;
+    };
 
     console.log('Token decoded:', { ...decoded, token: '***' });
 
@@ -122,35 +123,13 @@ export const validateQRCode = async (req: Request, res: Response) => {
       });
     }
 
-    // Verify the class exists
-    const classDoc = await Class.findById(decoded.classId);
-    if (!classDoc) {
-      return res.status(404).json({
-        message: 'Class not found',
-        error: 'CLASS_NOT_FOUND'
-      });
-    }
-
-    // Verify student is enrolled in the class
-    const enrollment = await Student.findOne({
-      classId: decoded.classId,
-      studentId // Using registration number
-    });
-
-    if (!enrollment) {
-      return res.status(403).json({
-        message: 'Student is not enrolled in this class',
-        error: 'NOT_ENROLLED'
-      });
-    }
-
     // Check if attendance already exists for today
     const today = new Date();
     console.log('Checking existing attendance for:', { classId: decoded.classId, studentId, date: today });
     
     const existingAttendance = await Attendance.findOne({
       classId: decoded.classId,
-      studentId, // Using registration number
+      studentId,
       date: {
         $gte: startOfDay(today),
         $lte: endOfDay(today)
@@ -169,7 +148,7 @@ export const validateQRCode = async (req: Request, res: Response) => {
     console.log('Creating new attendance record...');
     const attendance = new Attendance({
       classId: decoded.classId,
-      studentId, // Using registration number
+      studentId,
       date: today,
       status: 'present',
       method: 'qr',
@@ -218,7 +197,7 @@ export const markAttendance = async (req: Request, res: Response) => {
     }
 
     // Verify that the class exists
-    const classDoc = await Class.findById(classId);
+    const classDoc = await Class.findOne({ _id: classId }).lean() as IClass;
     if (!classDoc) {
       return res.status(404).json({
         message: 'Class not found',
@@ -226,12 +205,8 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if student is enrolled in the class using registration number
-    const student = await Student.findOne({ 
-      classId, 
-      studentId  // Using registration number
-    });
-    
+    // Check if student is enrolled in the class
+    const student = await Student.findOne({ classId, studentId });
     if (!student) {
       console.error('Student not enrolled in class:', { studentId, classId });
       return res.status(404).json({
@@ -249,11 +224,23 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
+    if (userRole === 'instructor' && classDoc.instructorId.toString() !== instructorId) {
+      console.error('Unauthorized access:', { 
+        instructorId, 
+        classInstructorId: classDoc.instructorId,
+        userRole
+      });
+      return res.status(403).json({
+        message: 'You do not have permission to mark attendance for this class',
+        error: 'UNAUTHORIZED'
+      });
+    }
+
     // Check if attendance already exists for today
     const today = new Date(timestamp);
     const existingAttendance = await Attendance.findOne({
       classId,
-      studentId, // Using registration number
+      studentId,
       date: {
         $gte: startOfDay(today),
         $lte: endOfDay(today)
@@ -261,31 +248,39 @@ export const markAttendance = async (req: Request, res: Response) => {
     });
 
     if (existingAttendance) {
-      return res.status(400).json({
-        message: 'Attendance already marked for today',
-        error: 'DUPLICATE_ATTENDANCE'
+      // Update existing attendance
+      existingAttendance.status = 'present';
+      existingAttendance.timestamp = new Date(timestamp);
+      await existingAttendance.save();
+
+      console.log('Attendance updated successfully:', existingAttendance);
+
+      return res.json({ 
+        message: 'Attendance updated successfully',
+        attendance: existingAttendance
       });
     }
 
     // Create new attendance record
     const attendance = new Attendance({
       classId,
-      studentId, // Using registration number
+      studentId,
       date: today,
       status: 'present',
       method: 'qr',
-      timestamp: today
+      timestamp: new Date(timestamp)
     });
 
     await attendance.save();
+    console.log('Attendance marked successfully:', attendance);
 
-    res.json({
+    res.json({ 
       message: 'Attendance marked successfully',
       attendance
     });
   } catch (error) {
     console.error('Error marking attendance:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       message: 'Error marking attendance',
       error: error instanceof Error ? error.message : 'Unknown error'
     });

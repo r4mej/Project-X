@@ -25,7 +25,7 @@ export const createLoginLog = async (userId: string, req: Request) => {
 
     const log = await Log.create({
       userId,
-      username: user.userId,
+      username: user.username,
       role: user.role,
       sessionId,
       action: 'LOGIN',
@@ -55,7 +55,7 @@ export const createLogoutLog = async (userId: string, req: Request) => {
       console.warn('User not found during logout:', userId);
       throw new Error('User not found');
     }
-    console.log('User found:', user.userId);
+    console.log('User found:', user.username);
 
     // Find the active session for this user
     const activeSession = await Log.findOne({
@@ -72,7 +72,7 @@ export const createLogoutLog = async (userId: string, req: Request) => {
         // Create a standalone logout log without session data
         const logoutLog = await Log.create({
           userId,
-          username: user.userId,
+          username: user.username,
           role: user.role,
           sessionId: uuidv4(), // Generate new session ID
           action: 'LOGOUT',
@@ -91,7 +91,7 @@ export const createLogoutLog = async (userId: string, req: Request) => {
           error: createError,
           userData: {
             userId,
-            username: user.userId,
+            username: user.username,
             role: user.role
           }
         });
@@ -107,7 +107,7 @@ export const createLogoutLog = async (userId: string, req: Request) => {
       // Create logout log
       const logoutLog = await Log.create({
         userId,
-        username: user.userId,
+        username: user.username,
         role: user.role,
         sessionId: activeSession.sessionId,
         action: 'LOGOUT',
@@ -136,7 +136,7 @@ export const createLogoutLog = async (userId: string, req: Request) => {
         error: createError,
         sessionData: {
           userId,
-          username: user.userId,
+          username: user.username,
           sessionId: activeSession.sessionId
         }
       });

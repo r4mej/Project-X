@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
 import User from '../models/User';
-import Student from '../models/Student';
-import Attendance from '../models/Attendance';
 
 // Get all users
 export const getUsers = async (req: Request, res: Response) => {
@@ -33,7 +31,7 @@ export const getUserById = async (req: Request, res: Response) => {
 // Create new user (admin only)
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, role, userId } = req.body;
+    const { username, email, role, userId, fullName } = req.body;
     console.log('Creating user with data:', { username, email, role, userId });
     
     // Validate user ID format based on role
@@ -52,12 +50,14 @@ export const createUser = async (req: Request, res: Response) => {
     // Check for duplicates individually
     const duplicateChecks = await Promise.all([
       User.findOne({ email: email.trim().toLowerCase() }),
+      User.findOne({ username: username.trim() }),
       User.findOne({ userId: userId.trim() })
     ]);
 
     const duplicateFields = [];
     if (duplicateChecks[0]) duplicateFields.push('email');
-    if (duplicateChecks[1]) duplicateFields.push('user ID');
+    if (duplicateChecks[1]) duplicateFields.push('username');
+    if (duplicateChecks[2]) duplicateFields.push('user ID');
 
     if (duplicateFields.length > 0) {
       return res.status(400).json({
@@ -69,16 +69,9 @@ export const createUser = async (req: Request, res: Response) => {
     // Use userId as password - do not hash it here, the pre-save hook will handle it
     const password = userId;
     
-    // Split username into surname and firstName
-    const [surname, firstName] = username.split(',').map((part: string) => part.trim());
-    if (!surname || !firstName) {
-      return res.status(400).json({ message: 'Username must be in format: "Surname, FirstName"' });
-    }
-    
     // Create user - password will be hashed by the pre-save hook
     const user = await User.create({
-      surname,
-      firstName,
+      username: username.trim(),
       email: email.trim().toLowerCase(),
       password, // Plain password, will be hashed by the pre-save hook
       role,
@@ -87,8 +80,7 @@ export const createUser = async (req: Request, res: Response) => {
     
     console.log('User created successfully:', {
       _id: user._id,
-      surname: user.surname,
-      firstName: user.firstName,
+      username: user.username,
       email: user.email,
       role: user.role,
       userId: user.userId
@@ -96,7 +88,7 @@ export const createUser = async (req: Request, res: Response) => {
     
     res.status(201).json({
       _id: user._id,
-      username: `${user.surname}, ${user.firstName}`,
+      username: user.username,
       email: user.email,
       role: user.role,
       userId: user.userId
@@ -110,7 +102,7 @@ export const createUser = async (req: Request, res: Response) => {
 // Update user (admin only)
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, role, userId } = req.body;
+    const { username, email, role, userId, fullName } = req.body;
     
     // Find user
     const user = await User.findById(req.params.id);
@@ -140,13 +132,18 @@ export const updateUser = async (req: Request, res: Response) => {
       }),
       User.findOne({ 
         _id: { $ne: req.params.id },
+        username: username.trim()
+      }),
+      User.findOne({ 
+        _id: { $ne: req.params.id },
         userId: userId.trim()
       })
     ]);
 
     const duplicateFields = [];
     if (duplicateChecks[0]) duplicateFields.push('email');
-    if (duplicateChecks[1]) duplicateFields.push('user ID');
+    if (duplicateChecks[1]) duplicateFields.push('username');
+    if (duplicateChecks[2]) duplicateFields.push('user ID');
 
     if (duplicateFields.length > 0) {
       return res.status(400).json({
@@ -155,15 +152,8 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
     
-    // Split username into surname and firstName
-    const [surname, firstName] = username.split(',').map((part: string) => part.trim());
-    if (!surname || !firstName) {
-      return res.status(400).json({ message: 'Username must be in format: "Surname, FirstName"' });
-    }
-    
     // Update user
-    user.surname = surname;
-    user.firstName = firstName;
+    user.username = username || user.username;
     user.email = email || user.email;
     user.role = role || user.role;
     
@@ -177,7 +167,7 @@ export const updateUser = async (req: Request, res: Response) => {
     
     res.status(200).json({
       _id: user._id,
-      username: `${user.surname}, ${user.firstName}`,
+      username: user.username,
       email: user.email,
       role: user.role,
       userId: user.userId
@@ -218,20 +208,11 @@ export const deleteUser = async (req: Request, res: Response) => {
     if (user.userId === 'ADMIN-001') {
       return res.status(400).json({ message: 'Cannot delete the root admin account (ADMIN-001)' });
     }
-
-    // If deleting a student, remove their enrollments and attendance records
-    if (user.role === 'student') {
-      // Delete all class enrollments
-      await Student.deleteMany({ studentId: user.userId });
-      
-      // Delete all attendance records
-      await Attendance.deleteMany({ studentId: user.userId });
-    }
     
     // Use deleteOne instead of remove
     await User.deleteOne({ _id: req.params.id });
     
-    res.status(200).json({ message: 'User and all associated records removed' });
+    res.status(200).json({ message: 'User removed' });
   } catch (error) {
     console.error('Delete user error:', error);
     res.status(500).json({ message: 'Server error' });
