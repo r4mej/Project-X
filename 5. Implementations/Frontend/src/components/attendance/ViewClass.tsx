@@ -138,6 +138,7 @@ const ViewClass: React.FC = () => {
   const handleAddStudent = async () => {
     try {
 <<<<<<< HEAD
+<<<<<<< HEAD
       if (!newStudentId.trim() || !newUsername.trim()) {
         Alert.alert('Error', 'Please enter student ID and username.');
         return;
@@ -461,6 +462,7 @@ const ViewClass: React.FC = () => {
         <Text style={styles.headerTitle}>Student List</Text>
       </View>
 <<<<<<< HEAD
+<<<<<<< HEAD
 
       <View style={styles.content}>
         <View style={styles.classHeader}>
@@ -738,6 +740,7 @@ const ViewClass: React.FC = () => {
             style={styles.bottomDrawerContent}
           >
 <<<<<<< HEAD
+<<<<<<< HEAD
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Add New Student</Text>
@@ -820,6 +823,7 @@ const ViewClass: React.FC = () => {
             exiting={SlideOutDown.springify().damping(15)}
             style={styles.bottomDrawerContent}
           >
+<<<<<<< HEAD
 <<<<<<< HEAD
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
@@ -1166,6 +1170,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 <<<<<<< HEAD
+<<<<<<< HEAD
   emptyState: {
     flex: 1,
     justifyContent: 'center',
@@ -1229,6 +1234,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 16,
 <<<<<<< HEAD
+<<<<<<< HEAD
     fontSize: 16,
   },
   submitButton: {
@@ -1256,6 +1262,7 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     color: '#333',
   },
+<<<<<<< HEAD
 <<<<<<< HEAD
   classOptionSubtitle: {
     fontSize: 14,
@@ -1382,6 +1389,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
+<<<<<<< HEAD
 <<<<<<< HEAD
   confirmationButtonText: {
     fontSize: 16,
@@ -1745,6 +1753,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',
+<<<<<<< HEAD
 >>>>>>> parent of 2942016 (Vibe coding)
   },
   saveButton: {

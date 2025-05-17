@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import Student, { IStudent } from '../models/Student';
 import Class, { IClass, ITimeSlot } from '../models/Class';
 import Attendance from '../models/Attendance';
@@ -40,6 +41,7 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const { classId, studentId, username } = req.body;
 
@@ -119,12 +121,14 @@ export const addStudent = async (req: Request, res: Response) => {
     res.status(201).json(student);
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
+<<<<<<< HEAD
 >>>>>>> parent of 2942016 (Vibe coding)
   }
 };
 
 export const updateStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const { studentId, username } = req.body;
 
@@ -171,6 +175,7 @@ export const updateStudent = async (req: Request, res: Response) => {
 
 export const deleteStudent = async (req: Request, res: Response) => {
   try {
+<<<<<<< HEAD
 <<<<<<< HEAD
     const { id, studentId, classId } = req.params;  // Get all possible params from URL
 
@@ -360,6 +365,7 @@ export const getTodayStatus = async (req: Request, res: Response) => {
     res.json({ message: 'Student deleted' });
   } catch (err) {
     res.status(400).json({ error: (err as Error).message });
+<<<<<<< HEAD
 >>>>>>> parent of 2942016 (Vibe coding)
   }
 };

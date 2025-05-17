@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(authenticateToken);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // Student dashboard endpoints (more specific routes first)
 router.get('/:studentId/classes/today', getTodayClasses);
 router.get('/:studentId/attendance/overview', getAttendanceOverview);

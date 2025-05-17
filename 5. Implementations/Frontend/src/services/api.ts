@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { UserRole } from '../navigation/types';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 // Get the local IP address for Android
 const getLocalIPAddress = () => {
   if (Platform.OS === 'android') {
@@ -50,6 +51,7 @@ const API_URLS = [
 const MAX_RETRIES = 2;  // Keep reduced retry count
 const RETRY_DELAY = 2000; // Keep increased delay
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 // Timeout configuration
 const TIMEOUT = Platform.OS === 'web' ? 10000 : 20000; // Adjusted for mobile
@@ -330,6 +332,7 @@ export const studentAPI = {
     const res = await api.put<Student>(`/students/${studentId}`, student);
     return res.data;
   },
+<<<<<<< HEAD
   deleteStudent: async (studentId: string, classId: string) => {
     await api.delete(`/students/${studentId}`);
   },
@@ -655,6 +658,7 @@ export const reportAPI = {
 
 export const qrAPI = {
 <<<<<<< HEAD
+<<<<<<< HEAD
   // Generate QR code for a class
   async generateQRCode(classId: string): Promise<any> {
     const response = await api.post('/qr/generate', { classId });
@@ -684,6 +688,7 @@ export const qrAPI = {
       if (!token) {
         throw new Error('No authentication token found');
       }
+<<<<<<< HEAD
 <<<<<<< HEAD
 
       if (!currentUser || !currentUser.role) {

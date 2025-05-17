@@ -4,6 +4,7 @@ import Attendance from '../models/Attendance';
 import { JWT_SECRET } from '../config';
 import { startOfDay, endOfDay } from 'date-fns';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import Class, { IClass } from '../models/Class';
 import Attendance from '../models/Attendance';
 import { Types } from 'mongoose';
@@ -15,6 +16,7 @@ import User from '../models/User';
 interface AuthenticatedRequest extends Request {
   user: {
     _id: string;
+<<<<<<< HEAD
 <<<<<<< HEAD
     role: string;
     userId?: string;  // Add userId for registration number
@@ -209,6 +211,7 @@ export const validateQRCode = async (req: Request, res: Response) => {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+<<<<<<< HEAD
 <<<<<<< HEAD
 };
 
