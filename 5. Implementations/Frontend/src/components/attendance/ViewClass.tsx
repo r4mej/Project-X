@@ -828,6 +828,7 @@ const ViewClass: React.FC = () => {
           >
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Edit Student</Text>
