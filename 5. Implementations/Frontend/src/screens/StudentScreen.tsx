@@ -836,6 +836,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    position: 'relative',
   },
   menuButton: {
     width: 40,
@@ -848,15 +849,15 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    right: 0,
+    alignItems: 'flex-end',
+    paddingRight: 0,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    textAlign: 'right',
+    textAlign: 'center',
+    flex: 1,
   },
   contentContainer: {
     padding: 16,

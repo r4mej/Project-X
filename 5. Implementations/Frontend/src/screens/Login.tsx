@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,13 @@ const Login: React.FC = () => {
   const { login, user } = useAuth();
   const iconRotation = new Animated.Value(0);
   const [isLoginSuccess, setIsLoginSuccess] = useState(false);
+  
+  // For Project X text animation
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const [showProjectXText, setShowProjectXText] = useState(false);
+  
+  // For rainbow background animation
+  const backgroundColorAnimation = useRef(new Animated.Value(0)).current;
 
   // Watch for user changes and navigate accordingly
   useEffect(() => {
@@ -44,7 +51,7 @@ const Login: React.FC = () => {
     }
   }, [user, navigation, isLoginSuccess]);
 
-  // Animation effect
+  // Icon rotation animation
   useEffect(() => {
     const rotateAnimation = Animated.loop(
       Animated.timing(iconRotation, {
@@ -56,9 +63,52 @@ const Login: React.FC = () => {
     rotateAnimation.start();
   }, []);
 
+  // Rainbow background animation
+  useEffect(() => {
+    const rainbowAnimation = Animated.loop(
+      Animated.timing(backgroundColorAnimation, {
+        toValue: 1,
+        duration: 5000,
+        useNativeDriver: false,
+      })
+    );
+    rainbowAnimation.start();
+
+    return () => {
+      rainbowAnimation.stop();
+    };
+  }, []);
+
+  // Project X text animation
+  useEffect(() => {
+    if (showProjectXText) {
+      Animated.sequence([
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.delay(1000),
+        Animated.timing(textOpacity, {
+          toValue: 0,
+          duration: 500,
+          useNativeDriver: true,
+        })
+      ]).start(() => {
+        setShowProjectXText(false);
+      });
+    }
+  }, [showProjectXText]);
+
   const spin = iconRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
+  });
+
+  // Interpolate background color for rainbow effect
+  const backgroundColor = backgroundColorAnimation.interpolate({
+    inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
+    outputRange: ['#2eada6', '#a62ea6', '#a62e2e', '#a6a62e', '#2ea62e', '#2eada6']
   });
 
   const handleLogin = async () => {
@@ -91,15 +141,27 @@ const Login: React.FC = () => {
     setShowPassword(!showPassword);
   };
 
+  const handleIconPress = () => {
+    setShowProjectXText(true);
+  };
+
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, { backgroundColor }]}>
       <View style={styles.formContainer}>
         <View style={styles.iconContainer}>
-          <Animated.View style={[{ transform: [{ rotate: spin }] }]}>
-            <Ionicons name="calendar" size={80} color="#2eada6" />
-          </Animated.View>
+          <TouchableOpacity onPress={handleIconPress}>
+            <Animated.View style={[{ transform: [{ rotate: spin }] }]}>
+              <Ionicons name="close" size={80} color="#2eada6" />
+            </Animated.View>
+          </TouchableOpacity>
+          
+          {showProjectXText && (
+            <Animated.Text style={[styles.projectXText, { opacity: textOpacity }]}>
+              Project X
+            </Animated.Text>
+          )}
         </View>
-        <Text style={styles.title}>Welcome Back!</Text>
+        <Text style={styles.title}>Welcome!</Text>
         <Text style={styles.subtitle}>Login to your Account</Text>
         
         <TextInput
@@ -183,7 +245,7 @@ const Login: React.FC = () => {
         visible={showSuccessModal}
         message="Login Successful!"
       />
-    </View>
+    </Animated.View>
   );
 };
 
@@ -192,7 +254,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: '#2eada6',
+    // backgroundColor is now animated
   },
   formContainer: {
     backgroundColor: 'white',
@@ -211,6 +273,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     paddingTop: 10,
+    position: 'relative',
+  },
+  projectXText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2eada6',
+    marginTop: 10,
   },
   title: {
     fontSize: 28,

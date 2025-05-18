@@ -367,6 +367,8 @@ const AdminScreen: React.FC = () => {
     }
   };
 
+  const { triggerRefresh } = useRefresh();
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -378,6 +380,15 @@ const AdminScreen: React.FC = () => {
             <Ionicons name="menu" size={28} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={() => {
+              triggerRefresh();
+              Alert.alert("Refreshing", "Updating dashboard data...");
+            }}
+          >
+            <Ionicons name="refresh" size={24} color="white" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -477,6 +488,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    position: 'relative',
   },
   menuButton: {
     width: 40,
@@ -485,11 +497,19 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingLeft: 0,
   },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    paddingRight: 0,
+  },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: 'white',
-    textAlign: 'right',
+    textAlign: 'center',
+    flex: 1,
   },
   contentContainer: {
     padding: 20,
