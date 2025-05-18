@@ -361,12 +361,13 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
           <Text style={styles.cardTitle}>Quick Actions</Text>
           <Text style={styles.subTitle}>Access frequently used features</Text>
           <View style={styles.actionButtonsRow}>
+            
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
-              onPress={() => handleQuickAction('attendance')}
+              onPress={() => handleQuickAction('schedule')}
             >
-              <Ionicons name="qr-code" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Attendance</Text>
+              <Ionicons name="calendar" size={22} color="#2eada6" />
+              <Text style={[styles.actionText, { color: '#2eada6' }]}>Schedule</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
@@ -377,11 +378,12 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
             </TouchableOpacity>
             <TouchableOpacity 
               style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
-              onPress={() => handleQuickAction('schedule')}
+              onPress={() => handleQuickAction('attendance')}
             >
-              <Ionicons name="calendar" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Schedule</Text>
+              <Ionicons name="qr-code" size={22} color="#2eada6" />
+              <Text style={[styles.actionText, { color: '#2eada6' }]}>Attendance</Text>
             </TouchableOpacity>
+            
           </View>
         </View>
       </View>
