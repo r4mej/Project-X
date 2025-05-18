@@ -529,7 +529,37 @@ export const attendanceAPI = {
         url += `?${params.join('&')}`;
       }
       
+      console.log(`Fetching student attendance from URL: ${url}`);
       const response = await api.get(url);
+      console.log('Student attendance response:', response.data);
+      
+      // If the response lacks stats, calculate them from the attendance data
+      if (response.data && response.data.attendance && (!response.data.stats || Object.keys(response.data.stats).length === 0)) {
+        const attendance = response.data.attendance;
+        
+        // Create stats object if it doesn't exist
+        if (!response.data.stats) {
+          response.data.stats = {};
+        }
+        
+        // Count different attendance statuses
+        const present = attendance.filter((a: Attendance) => a.status === 'present').length;
+        const absent = attendance.filter((a: Attendance) => a.status === 'absent').length;
+        const late = attendance.filter((a: Attendance) => a.status === 'late').length;
+        const total = present + absent + late;
+        
+        // Set the stats
+        response.data.stats = {
+          total,
+          present,
+          absent,
+          late,
+          presentPercentage: total > 0 ? Math.round((present / total) * 100) : 0
+        };
+        
+        console.log('Calculated attendance stats:', response.data.stats);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching student attendance:', error);

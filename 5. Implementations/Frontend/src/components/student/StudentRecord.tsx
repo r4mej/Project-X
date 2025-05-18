@@ -70,18 +70,36 @@ const RecordsScreen: React.FC = () => {
     try {
       setLoading(true);
       
-      // Get attendance for the current semester (last 4 months)
+      // Get today's date in YYYY-MM-DD format
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      console.log('Today\'s date (Records):', todayStr);
+      
+      // Get attendance for the current semester (last 4 months or beginning of the year if it's early in the year)
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 4);
-      const endDate = new Date();
+      const currentMonth = startDate.getMonth(); // 0-based (0 = January)
+      
+      // If we're in the first 4 months of the year, start from January 1st
+      // Otherwise, go back 4 months
+      if (currentMonth < 4) { // January to April
+        startDate.setMonth(0); // January
+        startDate.setDate(1);  // 1st day
+      } else {
+        startDate.setMonth(startDate.getMonth() - 4);
+      }
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      console.log('Using date range for records:', startDateStr, 'to', todayStr);
 
       // Fetch attendance records
       const { attendance, stats: attendanceStats } = await attendanceAPI.getAttendanceByStudent(
         user!.userId,
         undefined,
-        startDate.toISOString().split('T')[0],
-        endDate.toISOString().split('T')[0]
+        startDateStr,
+        todayStr
       );
+
+      console.log('Records response:', { recordsCount: attendance?.length, stats: attendanceStats });
 
       // Convert API response to our interface
       const convertedAttendance: Attendance[] = ((attendance as unknown) as APIAttendance[]).map(record => ({
@@ -106,19 +124,42 @@ const RecordsScreen: React.FC = () => {
       setAttendanceRecords(sortedRecords);
         
       // Calculate statistics
-      const total = attendanceStats.total || 0;
-      const present = attendanceStats.present || 0;
-      const absent = attendanceStats.absent || 0;
-
+      console.log('Processing attendance stats:', attendanceStats);
+      
+      let total = attendanceStats?.total || 0;
+      let present = attendanceStats?.present || 0;
+      let absent = attendanceStats?.absent || 0;
+      
+      // If we have attendance data but no stats, calculate them from the attendance data
+      if (attendance?.length > 0 && total === 0) {
+        present = attendance.filter(record => record.status === 'present').length;
+        absent = attendance.filter(record => record.status === 'absent').length;
+        const late = attendance.filter(record => record.status === 'late').length;
+        total = present + absent + late;
+        console.log('Calculated stats from attendance records:', { total, present, absent });
+      }
+      
+      // Calculate percentages, avoiding division by zero
+      const presentPercentage = total > 0 ? (present / total) * 100 : 0;
+      const absentPercentage = total > 0 ? (absent / total) * 100 : 0;
+      
+      console.log('Final attendance stats:', { 
+        total, 
+        present, 
+        absent, 
+        presentPercentage, 
+        absentPercentage 
+      });
+      
       setStats({
         total,
         present: {
           count: present,
-          percentage: total > 0 ? (present / total) * 100 : 0
+          percentage: presentPercentage
         },
         absent: {
           count: absent,
-          percentage: total > 0 ? (absent / total) * 100 : 0
+          percentage: absentPercentage
         }
       });
 

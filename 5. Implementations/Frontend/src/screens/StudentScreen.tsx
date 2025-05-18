@@ -128,17 +128,31 @@ const StudentDashboard: React.FC = () => {
       setLoading(true);
       
       // Get today's date in YYYY-MM-DD format
-      const today = new Date().toISOString().split('T')[0];
+      const todayDate = new Date();
+      const today = todayDate.toISOString().split('T')[0];
+      console.log('Today\'s date:', today);
       
-      // Get attendance for the current semester (last 4 months)
+      // Get attendance for the current semester (last 4 months or beginning of the year if it's early in the year)
       const startDate = new Date();
-      startDate.setMonth(startDate.getMonth() - 4);
+      const currentMonth = startDate.getMonth(); // 0-based (0 = January)
+      
+      // If we're in the first 4 months of the year, start from January 1st
+      // Otherwise, go back 4 months
+      if (currentMonth < 4) { // January to April
+        startDate.setMonth(0); // January
+        startDate.setDate(1);  // 1st day
+      } else {
+        startDate.setMonth(startDate.getMonth() - 4);
+      }
+      
+      const startDateStr = startDate.toISOString().split('T')[0];
+      console.log('Using date range for attendance:', startDateStr, 'to', today);
       
       // Fetch attendance data for the student
       const { attendance, stats } = await attendanceAPI.getAttendanceByStudent(
         user!.userId,
         undefined,
-        startDate.toISOString().split('T')[0],
+        startDateStr,
         today
       );
 
@@ -194,9 +208,11 @@ const StudentDashboard: React.FC = () => {
       setRecentAttendance(sortedAttendance.slice(0, 5));
 
       // Check for today's attendance records
-      const todayAttendance = attendance.find(record => 
-        record.timestamp.split('T')[0] === today
-      );
+      const todayAttendance = attendance.find(record => {
+        const recordDate = record.timestamp.split('T')[0];
+        console.log(`Comparing record date ${recordDate} to today ${today}`);
+        return recordDate === today;
+      });
       
       if (todayAttendance) {
         console.log('Today\'s attendance found:', todayAttendance);
@@ -210,6 +226,7 @@ const StudentDashboard: React.FC = () => {
         // Handle both object and string classId formats
         if (todayAttendance.classId) {
           if (typeof todayAttendance.classId === 'object') {
+            console.log('ClassId is an object:', todayAttendance.classId);
             const classInfo = todayAttendance.classId as unknown as { subjectCode: string; className: string };
             setRecentSubject({
               subjectCode: classInfo.subjectCode,
@@ -218,6 +235,7 @@ const StudentDashboard: React.FC = () => {
             });
           } else if (typeof todayAttendance.classId === 'string') {
             // If we only have the classId as a string, try to fetch class information
+            console.log('ClassId is a string, fetching class details:', todayAttendance.classId);
             try {
               const classData = await classAPI.getClassById(todayAttendance.classId);
               if (classData) {

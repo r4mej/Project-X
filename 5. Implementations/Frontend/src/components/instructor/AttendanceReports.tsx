@@ -13,10 +13,13 @@ interface Class {
 interface Student {
   _id: string;
   studentId: string;
-  surname: string;
   firstName: string;
+  lastName: string;
   middleInitial?: string;
   classId: string;
+  email?: string;
+  yearLevel?: string;
+  course?: string;
 }
 
 interface AttendanceRecord {
@@ -199,7 +202,7 @@ const Reports: React.FC = () => {
   const getStudentName = (studentId: string): string => {
     const student = studentsMap.get(studentId);
     if (student) {
-      return `${student.surname}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`;
+      return `${student.lastName}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`;
     }
     return studentId;
   };
@@ -222,7 +225,7 @@ const Reports: React.FC = () => {
         const attendanceRecord = attendanceMap.get(student.studentId);
         return {
           studentId: student.studentId,
-          studentName: `${student.surname}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`,
+          studentName: `${student.lastName}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`,
           status: (attendanceRecord?.status || 'absent') as 'present' | 'absent'
         };
       });
@@ -407,10 +410,16 @@ const Reports: React.FC = () => {
       };
     }
 
+    // Get stats from reports data
+    // Make sure we don't divide by zero and handle empty data
+    const totalStudents = reportStats.total || 0;
+    const presentStudents = reportStats.present || 0;
+    const absentStudents = reportStats.absent || 0;
+
     return {
-      total: reportStats.total,
-      present: reportStats.present,
-      absent: reportStats.absent
+      total: totalStudents,
+      present: presentStudents,
+      absent: absentStudents
     };
   };
 
@@ -470,7 +479,7 @@ const Reports: React.FC = () => {
               );
               return {
                 studentId: student.studentId,
-                studentName: `${student.surname}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`,
+                studentName: `${student.lastName}, ${student.firstName}${student.middleInitial ? ` ${student.middleInitial}.` : ''}`,
                 status: (attendanceRecord ? attendanceRecord.status : 'absent') as 'present' | 'absent' | 'late'
               };
             });
