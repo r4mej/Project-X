@@ -52,16 +52,23 @@ const api = axios.create({
 // Add token to requests if it exists
 api.interceptors.request.use(async (config) => {
   try {
-    // Try AsyncStorage first
-    let token = await AsyncStorage.getItem('token');
+    let token;
     
-    // If no token in AsyncStorage and we're on web, try localStorage
-    if (!token && Platform.OS === 'web') {
+    // For web platform, try localStorage first
+    if (Platform.OS === 'web') {
       token = localStorage.getItem('token');
+    }
+    
+    // If no token found in localStorage or not on web, try AsyncStorage
+    if (!token) {
+      token = await AsyncStorage.getItem('token');
     }
     
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Adding token to request:', token.substring(0, 10) + '...');
+    } else {
+      console.log('No token found for request');
     }
     return config;
   } catch (error) {
@@ -102,7 +109,18 @@ export const authAPI = {
 
       // Store the token after successful login
       const token = response.data.token;
-      await storeAuthData(token, userData);
+      
+      // For web platform, store in localStorage first
+      if (Platform.OS === 'web') {
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+      
+      // Then store in AsyncStorage
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      
+      console.log('Auth data stored successfully');
 
       return {
         token,
