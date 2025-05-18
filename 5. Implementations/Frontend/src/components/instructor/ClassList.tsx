@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { AxiosError } from 'axios';
 import { BlurView } from 'expo-blur';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
@@ -143,16 +144,36 @@ const ViewClass: React.FC = () => {
         return;
       }
       
-      const newStudent = await studentAPI.addStudent({
+      // Add debug logging to identify request issues
+      console.log('Adding student with data:', {
         classId,
         studentId: newStudentId.trim(),
         firstName: newFirstName.trim(),
-        lastName: newSurname.trim(), // Use newSurname as lastName
-        middleInitial: newMiddleInitial.trim(),
+        lastName: newSurname.trim(),
+        middleInitial: newMiddleInitial?.trim() || undefined,
         email: `${newStudentId.trim().toLowerCase()}@student.example.com`,
-        yearLevel: yearSection?.split('-')[0] || '1st Year', // Extract year level from yearSection or use default
-        course: subjectCode?.split(' ')[0] || 'BSIT', // Extract course from subjectCode or use default
+        yearLevel: yearSection?.split('-')[0] || '1st Year',
+        course: subjectCode?.split(' ')[0] || 'BSIT'
       });
+      
+      // Create a student object with proper handling of empty fields
+      const studentData = {
+        classId,
+        studentId: newStudentId.trim(),
+        firstName: newFirstName.trim(),
+        lastName: newSurname.trim(),
+        email: `${newStudentId.trim().toLowerCase()}@student.example.com`,
+        yearLevel: yearSection?.split('-')[0] || '1st Year',
+        course: subjectCode?.split(' ')[0] || 'BSIT'
+      };
+      
+      // Only add middleInitial if it's not empty
+      const middleI = newMiddleInitial?.trim();
+      if (middleI && middleI.length > 0) {
+        Object.assign(studentData, { middleInitial: middleI });
+      }
+      
+      const newStudent = await studentAPI.addStudent(studentData);
 
       // Update the students list with the new student
       setStudents(prev => [...prev, newStudent]);
@@ -171,9 +192,31 @@ const ViewClass: React.FC = () => {
       setTimeout(() => {
         setShowSuccessModal(false);
       }, 2000);
-    } catch (err) {
-      console.error('Add student error:', err);
-      Alert.alert('Error', 'Failed to add student. Please check all required fields and try again.');
+    } catch (error) {
+      console.error('Add student error:', error);
+      
+      // Get more detailed error information
+      const axiosError = error as AxiosError<{message?: string, error?: string}>;
+      if (axiosError.response?.data) {
+        console.error('Server error details:', axiosError.response.data);
+        
+        // Handle specific error cases
+        const errorData = axiosError.response.data as any;
+        let errorMessage = errorData.message || errorData.error || 'Failed to add student';
+        
+        // Check for MongoDB duplicate key error
+        if (errorData.error && errorData.error.includes('E11000 duplicate key error')) {
+          // Extract the studentId from the error message
+          const match = errorData.error.match(/studentId: "([^"]+)"/);
+          const duplicateId = match ? match[1] : 'unknown';
+          
+          errorMessage = `Student ID ${duplicateId} already exists in the database. Please use a different ID.`;
+        }
+        
+        Alert.alert('Error', errorMessage);
+      } else {
+        Alert.alert('Error', 'Failed to add student. Please check all required fields and try again.');
+      }
     }
   };
 

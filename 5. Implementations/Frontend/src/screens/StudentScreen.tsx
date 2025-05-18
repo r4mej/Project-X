@@ -81,7 +81,7 @@ interface ClassSchedule {
 const StudentDashboard: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { refreshKey } = useRefresh();
+  const { refreshKey, triggerRefresh } = useRefresh();
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
@@ -104,11 +104,24 @@ const StudentDashboard: React.FC = () => {
 
   useEffect(() => {
     if (user?.userId) {
+      console.log('Fetching attendance data due to user or refresh change');
       fetchAttendanceData();
       fetchTodaySchedule();
     }
     fetchClasses();
   }, [user, refreshKey]);
+  
+  // Add a dedicated effect for handling just refreshKey changes
+  // This ensures attendance is refreshed even when user is already loaded
+  useEffect(() => {
+    if (user?.userId && refreshKey > 0) {
+      console.log('Refreshing attendance data due to refreshKey change:', refreshKey);
+      // Small delay to ensure backend has processed any new attendance data
+      setTimeout(() => {
+        fetchAttendanceData();
+      }, 500);
+    }
+  }, [refreshKey]);
 
   const fetchAttendanceData = async () => {
     try {
@@ -129,11 +142,39 @@ const StudentDashboard: React.FC = () => {
         today
       );
 
-      // Calculate attendance statistics
-      const totalAttendance = stats.total || 0;
-      const presentCount = stats.present || 0;
-      const absentCount = stats.absent || 0;
-      const lateCount = stats.late || 0;
+      console.log('Fetched attendance data:', { attendance, stats });
+
+      // Calculate attendance statistics - handle different possible API response formats
+      let totalAttendance = 0;
+      let presentCount = 0;
+      let absentCount = 0;
+      let lateCount = 0;
+      
+      if (stats) {
+        // Handle different possible API response formats
+        if (typeof stats.total === 'number') {
+          totalAttendance = stats.total;
+        } else if (stats.present !== undefined || stats.absent !== undefined || stats.late !== undefined) {
+          // If no total is provided but individual counts are, calculate total
+          presentCount = stats.present || 0;
+          absentCount = stats.absent || 0;
+          lateCount = stats.late || 0;
+          totalAttendance = presentCount + absentCount + lateCount;
+        }
+        
+        // If we have counts but no totalAttendance yet, calculate it
+        if (totalAttendance === 0 && (presentCount > 0 || absentCount > 0 || lateCount > 0)) {
+          totalAttendance = presentCount + absentCount + lateCount;
+        }
+        
+        // Make sure we have the individual counts
+        if (stats.present !== undefined) presentCount = stats.present;
+        if (stats.absent !== undefined) absentCount = stats.absent;
+        if (stats.late !== undefined) lateCount = stats.late;
+      }
+      
+      console.log('Calculated attendance stats:', { totalAttendance, presentCount, absentCount, lateCount });
+      
       const presentPercentage = totalAttendance > 0 
         ? Math.round((presentCount / totalAttendance) * 100) 
         : 0;
@@ -152,20 +193,49 @@ const StudentDashboard: React.FC = () => {
       );
       setRecentAttendance(sortedAttendance.slice(0, 5));
 
-      // Set today's status and subject info from most recent attendance
+      // Check for today's attendance records
       const todayAttendance = attendance.find(record => 
         record.timestamp.split('T')[0] === today
       );
       
-      setTodayStatus(todayAttendance?.status || 'not recorded');
-      
-      if (todayAttendance && todayAttendance.classId && typeof todayAttendance.classId === 'object') {
-        const classInfo = todayAttendance.classId as unknown as { subjectCode: string; className: string };
-        setRecentSubject({
-          subjectCode: classInfo.subjectCode,
-          className: classInfo.className,
-          timestamp: todayAttendance.timestamp
-        });
+      if (todayAttendance) {
+        console.log('Today\'s attendance found:', todayAttendance);
+        
+        // Make status lowercase to ensure consistency
+        const normalizedStatus = todayAttendance.status.toLowerCase();
+        setTodayStatus(normalizedStatus === 'present' ? 'present' :
+                      normalizedStatus === 'late' ? 'late' :
+                      normalizedStatus === 'absent' ? 'absent' : 'not recorded');
+        
+        // Handle both object and string classId formats
+        if (todayAttendance.classId) {
+          if (typeof todayAttendance.classId === 'object') {
+            const classInfo = todayAttendance.classId as unknown as { subjectCode: string; className: string };
+            setRecentSubject({
+              subjectCode: classInfo.subjectCode,
+              className: classInfo.className,
+              timestamp: todayAttendance.timestamp
+            });
+          } else if (typeof todayAttendance.classId === 'string') {
+            // If we only have the classId as a string, try to fetch class information
+            try {
+              const classData = await classAPI.getClassById(todayAttendance.classId);
+              if (classData) {
+                setRecentSubject({
+                  subjectCode: classData.subjectCode,
+                  className: classData.className,
+                  timestamp: todayAttendance.timestamp
+                });
+              }
+            } catch (error) {
+              console.error('Error fetching class details:', error);
+            }
+          }
+        }
+      } else {
+        console.log('No attendance record found for today');
+        setTodayStatus('not recorded');
+        setRecentSubject(null);
       }
 
     } catch (error) {
@@ -283,7 +353,9 @@ const StudentDashboard: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    // Normalize status to lowercase for case-insensitive comparison
+    const normalizedStatus = status.toLowerCase();
+    switch (normalizedStatus) {
       case 'present':
         return '#4CAF50';
       case 'late':
@@ -322,6 +394,15 @@ const StudentDashboard: React.FC = () => {
             <Ionicons name="menu" size={28} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Dashboard</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={() => {
+              triggerRefresh();
+              Alert.alert("Refreshing", "Updating attendance data...");
+            }}
+          >
+            <Ionicons name="refresh" size={24} color="white" />
+          </TouchableOpacity>
         </View>
         {user?.userId && (
           <View style={styles.studentIdContainer}>
@@ -425,7 +506,7 @@ const StudentDashboard: React.FC = () => {
                 />
               </View>
               <Text style={[styles.statusText, { color: getStatusColor(todayStatus) }]}>
-                {todayStatus.charAt(0).toUpperCase() + todayStatus.slice(1)}
+                {todayStatus === 'not recorded' ? 'Not Recorded' : todayStatus.charAt(0).toUpperCase() + todayStatus.slice(1)}
               </Text>
               <Text style={styles.statusInfo}>
                 {todayStatus === 'not recorded' 
@@ -744,6 +825,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'flex-start',
     paddingLeft: 0,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    right: 0,
   },
   headerTitle: {
     fontSize: 20,

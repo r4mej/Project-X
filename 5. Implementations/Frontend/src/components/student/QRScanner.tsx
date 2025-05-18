@@ -20,7 +20,7 @@ import {
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { StudentDrawerParamList } from '../../navigation/types';
 import { useRefresh } from '../../context/RefreshContext';
-import { attendanceAPI, authAPI } from '../../services/api';
+import { attendanceAPI, authAPI, studentAPI } from '../../services/api';
 
 // Import webcam for web platform
 import jsQR from 'jsqr';
@@ -81,28 +81,68 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
     }
   }, [isWeb]);
 
-  // Add a connection test when component loads
+  // Connection test gets run separately
   useEffect(() => {
-    const testAPIConnection = async () => {
+    const testConnection = async () => {
       try {
+        // First check API connection
         console.log('Testing API connection...');
         const isConnected = await attendanceAPI.testConnection();
-        if (isConnected) {
-          console.log('API connection successful');
-        } else {
+        
+        if (!isConnected) {
           console.error('Failed to connect to API server');
           Alert.alert(
             'Connection Issue', 
-            'Could not connect to the attendance server. Please check your connection and try again.'
+            'Could not connect to the attendance server. The app will save attendance locally until connection is restored.',
+            [
+              { text: 'OK' }
+            ]
           );
+        } else {
+          console.log('API connection successful');
         }
       } catch (error) {
-        console.error('Error testing connection:', error);
+        console.error('Error testing API connection:', error);
       }
     };
     
-    testAPIConnection();
+    testConnection();
   }, []);
+  
+  // User profile check runs only after studentId is set and visible is true
+  useEffect(() => {
+    // Only check profile when the QR scanner is visible and studentId exists
+    if (visible && studentId) {
+      const testUserProfile = async () => {
+        try {
+          console.log('Verifying user profile with studentId:', studentId);
+          
+          // Double-check user information is complete
+          try {
+            const user = await authAPI.getCurrentUser();
+            if (!user || !user.userId) {
+              console.error('Incomplete user profile');
+              Alert.alert(
+                'Profile Issue', 
+                'Your user profile is incomplete. This may cause problems when submitting attendance.',
+                [
+                  { text: 'OK' }
+                ]
+              );
+            } else {
+              console.log('User profile verification successful:', user.userId);
+            }
+          } catch (error) {
+            console.error('Error fetching user info for testing:', error);
+          }
+        } catch (error) {
+          console.error('Error testing user profile:', error);
+        }
+      };
+      
+      testUserProfile();
+    }
+  }, [visible, studentId]);
 
   useEffect(() => {
     (async () => {
@@ -281,7 +321,23 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         return;
       }
       
-      if (!studentId) {
+      // Get student ID either from state or current user
+      let currentStudentId = studentId;
+      if (!currentStudentId) {
+        try {
+          console.log('Attempting to get studentId from current user...');
+          const user = await authAPI.getCurrentUser();
+          if (user && user.userId) {
+            currentStudentId = user.userId;
+            setStudentId(currentStudentId); // Update state for future use
+            console.log('Retrieved studentId from current user:', currentStudentId);
+          }
+        } catch (error) {
+          console.error('Error retrieving current user:', error);
+        }
+      }
+      
+      if (!currentStudentId) {
         console.error('No student ID found');
         setErrorMessage('Error: Student ID not found. Please log in again.');
         setShowError(true);
@@ -302,7 +358,7 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
       }
       
       console.log('Submitting attendance with:', {
-        studentId,
+        studentId: currentStudentId, // Use the confirmed studentId
         classId: qrData.classId,
         studentName
       });
@@ -336,6 +392,49 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         return;
       }
       
+      // Check if student is enrolled in this class before submitting attendance
+      try {
+        console.log(`Verifying enrollment for student ${currentStudentId} in class ${qrData.classId}`);
+        const isEnrolled = await studentAPI.isStudentEnrolled(qrData.classId, currentStudentId);
+        
+        if (!isEnrolled) {
+          console.warn(`Student ${currentStudentId} not enrolled in class ${qrData.classId}`);
+          Alert.alert(
+            'Enrollment Required',
+            'You are not enrolled in this class.',
+            [
+              {
+                text: 'Class Details',
+                onPress: () => Alert.alert(
+                  'Class Information', 
+                  `Subject: ${qrData.subjectCode || 'Unknown'}\n` +
+                  `Class: ${qrData.className || qrData.yearSection || 'Unknown'}\n` +
+                  `Class ID: ${qrData.classId}\n` +
+                  `Student ID: ${currentStudentId}\n\n` +
+                  'Please ask your instructor to enroll you in this class.',
+                  [{ text: 'OK' }]
+                ),
+                style: 'default'
+              },
+              {
+                text: 'Close',
+                style: 'cancel'
+              }
+            ]
+          );
+          
+          setShowScanner(false);
+          setScanning(false);
+          return;
+        }
+        
+        console.log(`Student ${currentStudentId} is enrolled in class ${qrData.classId}, proceeding with attendance`);
+      } catch (error) {
+        // If enrollment check fails, we'll still try to submit attendance
+        // The server-side validation will catch enrollment issues
+        console.error('Error checking enrollment:', error);
+      }
+      
       // Try to get device location if available
       let locationData = undefined;
       if (!isWeb && navigator && navigator.geolocation) {
@@ -361,9 +460,11 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
       
       // Process attendance with enhanced data
       try {
+        // We've already checked that currentStudentId is not null earlier in the function
+        // If we got here, it's safe to use as non-null
         const attendance = await attendanceAPI.submitAttendance({
           classId: qrData.classId,
-          studentId,
+          studentId: currentStudentId!, // Using non-null assertion as we've checked this already
           studentName,
           timestamp: new Date().toISOString(),
           status: 'present',
@@ -392,6 +493,13 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         
         // Trigger refresh to update dashboard data
         triggerRefresh();
+        console.log("Refreshing dashboard data after QR scan");
+        
+        // Force a small delay before triggering another refresh to ensure API has updated
+        setTimeout(() => {
+          triggerRefresh();
+          console.log("Secondary refresh triggered to ensure up-to-date data");
+        }, 1000);
         
         setTimeout(() => {
           setShowSuccess(false);
@@ -410,9 +518,22 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         let errorDetails = '';
 
         if (error.response?.status === 404 && error.response?.data?.message?.includes('Student not found in this class')) {
-          errorTitle = 'Not Enrolled';
+          errorTitle = 'Enrollment Required';
           errorMessage = 'You are not enrolled in this class';
-          errorDetails = 'Please verify that you are trying to mark attendance for the correct class. If you believe this is an error, contact your instructor to ensure you are properly enrolled.';
+          
+          // Extract class ID and student ID from error details if available
+          const classId = error.response?.data?.details?.match(/class ([a-f0-9]+)/)?.[1] || qrData.classId;
+          const studentId = error.response?.data?.details?.match(/ID ([0-9-]+)/)?.[1] || '';
+          
+          errorDetails = `Student ID: ${studentId}\nClass ID: ${classId}\n\nPlease ask your instructor to enroll you in this class before scanning the attendance QR code again.`;
+          
+          // Log the detailed error for debugging
+          console.log('Enrollment error details:', {
+            classId: qrData.classId,
+            studentId,
+            className: qrData.className || qrData.yearSection || 'Unknown',
+            subjectCode: qrData.subjectCode || 'Unknown'
+          });
         } else if (error.message && error.message.includes('Authentication')) {
           errorMessage = error.message;
         } else if (error.message && error.message.includes('server')) {
@@ -425,7 +546,71 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
           errorMessage = error.response.data.message;
         }
         
-        if (errorDetails) {
+        // Handle enrollment error specially
+        if (errorTitle === 'Enrollment Required') {
+          Alert.alert(
+            errorTitle,
+            errorMessage,
+            [
+              {
+                text: 'Class Details',
+                onPress: () => Alert.alert(
+                  'Class Information', 
+                  `Subject: ${qrData.subjectCode || 'Unknown'}\n` +
+                  `Class: ${qrData.className || qrData.yearSection || 'Unknown'}\n\n` +
+                  errorDetails,
+                  [{ text: 'Copy Info', onPress: () => {/* Would copy to clipboard */} }, { text: 'OK' }]
+                ),
+                style: 'default'
+              },
+              {
+                text: 'Try Again',
+                onPress: () => setShowScanner(true),
+                style: 'default'
+              },
+              {
+                text: 'Close',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
+        // Handle server connection errors
+        else if (errorMessage.includes('server') || errorMessage.includes('connect')) {
+          Alert.alert(
+            'Connection Issue',
+            'Cannot connect to the attendance server. The system may be down or your internet connection may be unstable.',
+            [
+              {
+                text: 'Try Again',
+                onPress: () => setShowScanner(true)
+              },
+              {
+                text: 'Save Locally',
+                onPress: () => {
+                  // Save attendance record locally only
+                  saveAttendanceRecord(
+                    qrData.classId,
+                    qrData.subjectCode || 'Unknown',
+                    qrData.className || qrData.yearSection || 'Unknown',
+                    studentName || 'Unknown'
+                  );
+                  setConfirmationCode(qrData.classId);
+                  setConfirmationSubject(qrData.subjectCode || 'Unknown');
+                  setConfirmationClass(qrData.className || qrData.yearSection || 'Unknown');
+                  setShowSuccess(true);
+                  setTimeout(() => setShowSuccess(false), 3000);
+                }
+              },
+              {
+                text: 'Close',
+                style: 'cancel'
+              }
+            ]
+          );
+        }
+        // All other errors
+        else if (errorDetails) {
           Alert.alert(
             errorTitle,
             errorMessage,

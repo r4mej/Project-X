@@ -269,6 +269,11 @@ export const classAPI = {
     return response.data;
   },
 
+  getClassById: async (id: string) => {
+    const response = await api.get(`/classes/${id}`);
+    return response.data;
+  },
+
   createClass: async (classData: any) => {
     const response = await api.post('/classes', classData);
     return response.data;
@@ -318,6 +323,24 @@ export const studentAPI = {
   },
   deleteStudent: async (id: string) => {
     await api.delete(`/students/${id}`);
+  },
+  
+  // Check if a student is enrolled in a specific class
+  isStudentEnrolled: async (classId: string, studentId: string): Promise<boolean> => {
+    try {
+      console.log(`Checking if student ${studentId} is enrolled in class ${classId}`);
+      const students = await api.get<Student[]>(`/students/${classId}`);
+      
+      const isEnrolled = students.data.some(student => 
+        student.studentId === studentId || student.studentId === String(studentId));
+      
+      console.log(`Enrollment check result for student ${studentId} in class ${classId}: ${isEnrolled}`);
+      return isEnrolled;
+    } catch (error) {
+      console.error('Error checking student enrollment:', error);
+      // Return false to handle the error case gracefully
+      return false;
+    }
   }
 };
 
