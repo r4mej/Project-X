@@ -51,10 +51,10 @@ const AboutAppDrawer: React.FC<AboutAppDrawerProps> = ({ visible, onClose }) => 
 
             <ScrollView style={styles.content}>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Triple Threat + One</Text>
-                <Text style={styles.version}>Version 1.0.0</Text>
+                <Text style={styles.sectionTitle}>Goodnight I Love You</Text>
+                <Text style={styles.version}>Version BETA</Text>
                 <Text style={styles.description}>
-                  A comprehensive attendance management system designed to streamline the process of tracking student attendance in educational institutions.
+                  A cool automated attendance tracking system.
                 </Text>
               </View>
 
@@ -83,7 +83,7 @@ const AboutAppDrawer: React.FC<AboutAppDrawerProps> = ({ visible, onClose }) => 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Development Team</Text>
                 <Text style={styles.teamText}>
-                  Created by the Triple Threat + One team as part of the Software Engineering project.
+                  Created by team Goodnight I Love You
                 </Text>
               </View>
 
@@ -91,8 +91,8 @@ const AboutAppDrawer: React.FC<AboutAppDrawerProps> = ({ visible, onClose }) => 
                 <Text style={styles.sectionTitle}>Contact</Text>
                 <Text style={styles.contactText}>
                   For support or inquiries:{'\n'}
-                  Email: support@triplethreatplus.one{'\n'}
-                  Website: www.triplethreatplus.one
+                  Email: support@goodnight.u{'\n'}
+                  Website: www.goodnight.com
                 </Text>
               </View>
             </ScrollView>
