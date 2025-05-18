@@ -7,7 +7,6 @@ import DevLoginTool from '../components/DevLoginTool';
 import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
 import { RootStackParamList } from '../navigation/types';
-import { colors } from '../theme/colors';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -100,10 +99,7 @@ const Login: React.FC = () => {
       <View style={styles.formContainer}>
         <View style={styles.iconContainer}>
           <Animated.View style={[{ transform: [{ rotate: spin }] }]}>
-            <View style={styles.logoContainer}>
-              <Text style={styles.logoText}>X</Text>
-              <View style={styles.logoHighlight} />
-            </View>
+            <Ionicons name="calendar" size={80} color="#2eada6" />
           </Animated.View>
         </View>
         <Text style={styles.title}>Welcome Back!</Text>
@@ -112,7 +108,7 @@ const Login: React.FC = () => {
         <TextInput
           style={styles.input}
           placeholder="Username"
-          placeholderTextColor={colors.text.secondary}
+          placeholderTextColor="#9e9e9e"
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -123,7 +119,7 @@ const Login: React.FC = () => {
           <TextInput
             style={styles.passwordInput}
             placeholder="Password"
-            placeholderTextColor={colors.text.secondary}
+            placeholderTextColor="#9e9e9e"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -137,7 +133,7 @@ const Login: React.FC = () => {
             <Ionicons 
               name={showPassword ? "eye-off" : "eye"} 
               size={24} 
-              color={colors.text.secondary} 
+              color="#9e9e9e" 
             />
           </TouchableOpacity>
         </View>
@@ -157,7 +153,7 @@ const Login: React.FC = () => {
             {isLoading && (
               <View style={styles.loadingContainer}>
                 <Text style={styles.loadingDots}>...</Text>
-                <ActivityIndicator size="small" color={colors.text.inverse} style={styles.loadingIcon} />
+                <ActivityIndicator size="small" color="white" style={styles.loadingIcon} />
               </View>
             )}
           </View>
@@ -199,113 +195,74 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: colors.primary.main,
+    backgroundColor: '#2eada6',
   },
   formContainer: {
-    backgroundColor: colors.surface.card,
+    backgroundColor: 'white',
     padding: 20,
-    borderRadius: 16,
-    shadowColor: colors.neutral.black,
+    borderRadius: 10,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowRadius: 5,
+    elevation: 3,
   },
   iconContainer: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     paddingTop: 10,
-  },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: colors.primary.main,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    transform: [{ rotate: '0deg' }],
-    shadowColor: colors.neutral.black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  logoText: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: colors.text.inverse,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  logoHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '50%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
-    color: colors.primary.main,
+    color: '#2eada6',
   },
   subtitle: {
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginBottom: 24,
+    fontSize: 18,
+    color: '#555',
+    marginBottom: 20,
     textAlign: 'center',
   },
   input: {
-    backgroundColor: colors.neutral.lightGray,
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border.light,
-    color: colors.text.primary,
-    fontSize: 16,
+    borderColor: '#ccc',
+    color: '#424242',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border.light,
-    borderRadius: 12,
-    backgroundColor: colors.neutral.lightGray,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    backgroundColor: '#f0f0f0',
   },
   passwordInput: {
     flex: 1,
-    padding: 16,
-    color: colors.text.primary,
-    fontSize: 16,
+    padding: 15,
+    color: '#424242',
   },
   eyeIcon: {
-    padding: 12,
-    color: colors.text.secondary,
+    padding: 10,
   },
   button: {
-    backgroundColor: colors.primary.main,
-    padding: 16,
-    borderRadius: 12,
+    backgroundColor: '#2eada6',
+    padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 10,
   },
   buttonDisabled: {
-    backgroundColor: colors.neutral.gray,
+    backgroundColor: '#a0a0a0',
   },
   buttonContent: {
     flexDirection: 'row',
@@ -313,17 +270,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonText: {
-    color: colors.text.inverse,
-    fontWeight: '600',
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    marginLeft: 4,
   },
   loadingDots: {
-    color: colors.text.inverse,
+    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
     marginRight: 4,
@@ -338,44 +295,42 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    backgroundColor: colors.surface.modal,
-    borderRadius: 16,
-    padding: 24,
-    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    width: '80%',
     alignItems: 'center',
-    shadowColor: colors.neutral.black,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 2,
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.primary.main,
-    marginBottom: 12,
-    textAlign: 'center',
+    marginBottom: 10,
+    color: '#2eada6',
   },
   modalMessage: {
     fontSize: 16,
-    color: colors.text.secondary,
-    marginBottom: 24,
+    marginBottom: 20,
+    color: '#555',
     textAlign: 'center',
-    lineHeight: 22,
   },
   modalButton: {
-    backgroundColor: colors.primary.main,
-    padding: 14,
-    borderRadius: 12,
-    width: '60%',
+    backgroundColor: '#2eada6',
+    padding: 10,
+    borderRadius: 5,
+    width: '50%',
     alignItems: 'center',
   },
   modalButtonText: {
-    color: colors.text.inverse,
-    fontWeight: '600',
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
   }
 });

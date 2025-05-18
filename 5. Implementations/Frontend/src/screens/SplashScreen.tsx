@@ -1,7 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../theme/colors';
 
 const SplashScreen: React.FC = () => {
   const iconRotation = new Animated.Value(0);
@@ -50,10 +49,7 @@ const SplashScreen: React.FC = () => {
   });
 
   return (
-    <LinearGradient
-      colors={[colors.primary.main, colors.primary.dark]}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.mainContent}>
         <Animated.View 
           style={[
@@ -63,10 +59,7 @@ const SplashScreen: React.FC = () => {
         >
           <View style={styles.iconContainer}>
             <Animated.View style={[{ transform: [{ rotate: spin }] }]}>
-              <View style={styles.logoContainer}>
-                <Text style={styles.logoText}>X</Text>
-                <View style={styles.logoHighlight} />
-              </View>
+              <Ionicons name="calendar" size={120} color="#fff" />
             </Animated.View>
           </View>
           <Text style={styles.title}>Project X</Text>
@@ -75,13 +68,14 @@ const SplashScreen: React.FC = () => {
       <Animated.View style={[styles.subtitleContainer, { opacity: subtitleFadeAnim }]}>
         <Text style={styles.subtitle}>Attendance App</Text>
       </Animated.View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#2eada6',
   },
   mainContent: {
     flex: 1,
@@ -92,55 +86,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconContainer: {
-    marginBottom: 24,
-  },
-  logoContainer: {
-    width: 120,
-    height: 120,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  logoText: {
-    fontSize: 72,
-    fontWeight: '800',
-    color: colors.text.inverse,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  logoHighlight: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '50%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: 'bold',
-    color: colors.text.inverse,
-    marginTop: 24,
-    textShadowColor: 'rgba(0, 0, 0, 0.1)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    color: '#fff',
+    marginTop: 20,
   },
   subtitleContainer: {
-    paddingBottom: 60,
+    paddingBottom: 50,
     alignItems: 'center',
   },
   subtitle: {
     fontSize: 24,
-    color: colors.text.inverse,
+    color: '#fff',
     opacity: 0.9,
-    fontWeight: '500',
   },
 });
 

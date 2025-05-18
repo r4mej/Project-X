@@ -1,56 +1,39 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAttendance extends Document {
   classId: mongoose.Types.ObjectId;
   studentId: string;
-  date: Date;
-  status: 'present' | 'absent' | 'late';
-  method: 'qr' | 'manual' | 'gps';
+  studentName?: string;
   timestamp: Date;
+  status: 'present' | 'absent' | 'late';
+  recordedVia: 'qr' | 'manual' | 'system';
+  deviceInfo?: string;
+  ipAddress?: string;
   location?: {
-    latitude: number;
-    longitude: number;
+    latitude?: number;
+    longitude?: number;
   };
 }
 
 const AttendanceSchema: Schema = new Schema({
-  classId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Class',
-    required: true
-  },
-  studentId: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  date: {
-    type: Date,
-    required: true
-  },
-  status: {
-    type: String,
-    enum: ['present', 'absent', 'late'],
-    default: 'present'
-  },
-  method: {
-    type: String,
-    enum: ['qr', 'manual', 'gps'],
-    required: true
-  },
-  timestamp: {
-    type: Date,
-    default: Date.now
-  },
+  classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
+  studentId: { type: String, required: true },
+  studentName: { type: String },
+  timestamp: { type: Date, required: true },
+  status: { type: String, enum: ['present', 'absent', 'late'], default: 'present' },
+  recordedVia: { type: String, enum: ['qr', 'manual', 'system'], default: 'qr' },
+  deviceInfo: { type: String },
+  ipAddress: { type: String },
   location: {
-    latitude: Number,
-    longitude: Number
+    latitude: { type: Number },
+    longitude: { type: Number }
   }
 }, {
-  timestamps: true
+  timestamps: true // Add createdAt and updatedAt fields
 });
 
-// Create compound index for unique attendance per student per class per day
-AttendanceSchema.index({ classId: 1, studentId: 1, date: 1 }, { unique: true });
+// Create a compound index to optimize queries
+AttendanceSchema.index({ classId: 1, timestamp: 1 });
+AttendanceSchema.index({ studentId: 1, classId: 1 });
 
 export default mongoose.model<IAttendance>('Attendance', AttendanceSchema); 

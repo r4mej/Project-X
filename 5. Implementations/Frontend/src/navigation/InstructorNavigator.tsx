@@ -9,7 +9,6 @@ import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
 import InstructorDashboard from '../screens/InstructorScreen';
 import { InstructorDrawerParamList } from './types';
-import { colors } from '../theme/colors';
 
 const Drawer = createDrawerNavigator<InstructorDrawerParamList>();
 
@@ -201,15 +200,15 @@ const CustomDrawerContent = ({ navigation }: any) => {
         activeOpacity={1}
       >
         <View style={styles.drawerItemLeft}>
-          <Ionicons name="notifications-outline" size={24} color={colors.instructor.primary.main} />
+          <Ionicons name="notifications-outline" size={24} color="#2eada6" />
           <Text style={styles.drawerItemText}>Notifications</Text>
         </View>
         <Switch
           value={notificationsEnabled}
           onValueChange={toggleNotifications}
-          trackColor={{ false: colors.neutral.lightGray, true: colors.instructor.primary.light }}
-          thumbColor={notificationsEnabled ? colors.instructor.primary.main : colors.neutral.gray}
-          ios_backgroundColor={colors.neutral.lightGray}
+          trackColor={{ false: '#d4d4d4', true: '#93d5d1' }}
+          thumbColor={notificationsEnabled ? '#2eada6' : '#f4f3f4'}
+          ios_backgroundColor="#d4d4d4"
           style={styles.notificationToggle}
         />
       </TouchableOpacity>
@@ -218,7 +217,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
         style={styles.drawerItem}
         onPress={() => navigation.navigate('AboutApp')}
       >
-        <Ionicons name="information-circle-outline" size={24} color={colors.instructor.primary.main} />
+        <Ionicons name="information-circle-outline" size={24} color="#2eada6" />
         <Text style={styles.drawerItemText}>About App</Text>
       </TouchableOpacity>
 
@@ -226,7 +225,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
         style={styles.drawerItem}
         onPress={() => navigation.navigate('HelpSupport')}
       >
-        <Ionicons name="help-circle-outline" size={24} color={colors.instructor.primary.main} />
+        <Ionicons name="help-circle-outline" size={24} color="#2eada6" />
         <Text style={styles.drawerItemText}>Help & Support</Text>
       </TouchableOpacity>
 
@@ -234,7 +233,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
         style={[styles.drawerItem, styles.logoutButton]}
         onPress={handleLogoutPress}
       >
-        <Ionicons name="log-out-outline" size={24} color={colors.status.error} />
+        <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
         <Text style={[styles.drawerItemText, styles.logoutText]}>Logout</Text>
       </TouchableOpacity>
 
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerHeader: {
-    backgroundColor: colors.instructor.primary.main,
+    backgroundColor: '#2eada6',
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -359,18 +358,18 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: colors.instructor.primary.dark,
+    backgroundColor: '#2eada6',
     borderRadius: 12,
     padding: 4,
     borderWidth: 2,
-    borderColor: colors.text.inverse,
+    borderColor: 'white',
   },
   profileInfo: {
     marginTop: 4,
     alignItems: 'center',
   },
   username: {
-    color: colors.text.inverse,
+    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 2,
@@ -407,21 +406,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: '#f0f0f0',
   },
   drawerItemText: {
     marginLeft: 16,
     fontSize: 16,
-    color: colors.instructor.primary.main,
+    color: '#2eada6',
     fontWeight: '500',
   },
   logoutButton: {
     marginTop: 'auto',
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: '#f0f0f0',
   },
   logoutText: {
-    color: colors.status.error,
+    color: '#ff6b6b',
   },
   notificationContainer: {
     position: 'absolute',
@@ -432,13 +431,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   notification: {
-    backgroundColor: colors.status.success,
+    backgroundColor: '#4CAF50',
     borderRadius: 25,
     padding: 15,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: colors.neutral.black,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -448,7 +447,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   notificationText: {
-    color: colors.text.inverse,
+    color: 'white',
     fontSize: 16,
     fontWeight: '500',
   },

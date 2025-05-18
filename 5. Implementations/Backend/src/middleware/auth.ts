@@ -3,11 +3,13 @@ import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config';
 import User from '../models/User';
 
-export interface AuthenticatedRequest extends Request {
-  user: {
-    _id: string;
-    role?: string;
-  };
+interface UserPayload {
+  id: string;
+  role: string;
+}
+
+interface AuthenticatedRequest extends Request {
+  user: UserPayload;
 }
 
 export const authenticateToken = async (
@@ -28,26 +30,8 @@ export const authenticateToken = async (
   }
 
   try {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string };
-    
-    // Fetch complete user data from database
-    const user = await User.findById(decoded.id).select('-password');
-    
-    if (!user) {
-      console.log('Auth middleware - User not found');
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-=======
     const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
->>>>>>> parent of 2942016 (Vibe coding)
-    (req as AuthenticatedRequest).user = {
-      _id: decoded.id,
-      role: decoded.role
-    };
+    (req as AuthenticatedRequest).user = decoded;
     console.log('Auth middleware - Token verified successfully. User:', decoded.id);
     next();
   } catch (err) {
@@ -66,7 +50,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as { id: string };
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret') as any;
     
     // Find user by id
     const user = await User.findById(decoded.id).select('-password');
@@ -76,10 +60,7 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Add user to request
-    (req as AuthenticatedRequest).user = {
-      _id: user._id.toString(),
-      role: user.role
-    };
+    req.user = user;
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token is not valid' });

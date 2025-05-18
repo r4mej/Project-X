@@ -42,13 +42,11 @@ const ViewClass: React.FC = () => {
   const [availableClasses, setAvailableClasses] = useState<Class[]>([]);
   const [selectedTargetClass, setSelectedTargetClass] = useState<string | null>(null);
   const [newStudentId, setNewStudentId] = useState('');
-  const [newUsername, setNewUsername] = useState('');
   const [newSurname, setNewSurname] = useState('');
   const [newFirstName, setNewFirstName] = useState('');
   const [newMiddleInitial, setNewMiddleInitial] = useState('');
   const [editStudentIndex, setEditStudentIndex] = useState<number | null>(null);
   const [editStudentId, setEditStudentId] = useState('');
-  const [editUsername, setEditUsername] = useState('');
   const [editSurname, setEditSurname] = useState('');
   const [editFirstName, setEditFirstName] = useState('');
   const [editMiddleInitial, setEditMiddleInitial] = useState('');
@@ -118,45 +116,19 @@ const ViewClass: React.FC = () => {
     }
   };
 
-  // Sort students by username
+  // Sort students by surname
   const sortedStudents = [...students].sort((a, b) => {
-    const getUsername = (s: Student) => s.username.trim().toLowerCase();
-    const comparison = getUsername(a).localeCompare(getUsername(b));
-    return comparison;
+    const getSurname = (s: Student) => s.surname.trim().toLowerCase();
+    const comparison = getSurname(a).localeCompare(getSurname(b));
+    return sortAscending ? comparison : -comparison;
   });
 
-  // Helper function to format student ID
-  const formatStudentId = (id: string) => {
-    const studentIdRegex = /^\d{4}-\d{4}$/;
-    if (!studentIdRegex.test(id)) {
-      // If it's not in the correct format, return it with a warning indicator
-      return `${id} (Invalid Format)`;
-    }
-    return id;
-  };
-
   const handleAddStudent = async () => {
+    if (!newStudentId.trim() || !newSurname.trim() || !newFirstName.trim()) {
+      Alert.alert('Error', 'Please enter student ID, surname, and first name.');
+      return;
+    }
     try {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-      if (!newStudentId.trim() || !newUsername.trim()) {
-        Alert.alert('Error', 'Please enter student ID and username.');
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/students/add`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          classId: classId,
-          studentId: newStudentId.trim(),
-          username: newUsername.trim()
-        })
-=======
       // Debug: Check if we have a token
       const token = await AsyncStorage.getItem('token');
       if (!token) {
@@ -170,73 +142,53 @@ const ViewClass: React.FC = () => {
         surname: newSurname.trim(),
         firstName: newFirstName.trim(),
         middleInitial: newMiddleInitial.trim(),
->>>>>>> parent of 2942016 (Vibe coding)
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to add student');
-      }
-
-      // Add the new student to the list
-      const newStudent = data.student;
       setStudents(prev => [...prev, newStudent]);
-
-      // Clear input fields
+      
+      // Clear form and close modal
       setNewStudentId('');
-      setNewUsername('');
+      setNewSurname('');
+      setNewFirstName('');
+      setNewMiddleInitial('');
+      setAddModalVisible(false);
 
-      // Show success message
-      Alert.alert('Success', `Student ${newStudent.username} has been added to the class.`);
-
-    } catch (error: any) {
-      console.error('Error adding student:', error);
-      Alert.alert('Error', error.message || 'Failed to add student');
+      // Show success modal
+      const studentName = `${newStudent.surname}, ${newStudent.firstName}${newStudent.middleInitial ? ' ' + newStudent.middleInitial + '.' : ''}`;
+      setSuccessModalMessage(`${studentName} has been added successfully`);
+      setShowSuccessModal(true);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 2000);
+    } catch (err) {
+      console.error('Add student error:', err);
+      Alert.alert('Error', 'Failed to add student. Please check if you are logged in.');
     }
   };
 
   const handleEditStudent = async () => {
+    if (editStudentIndex === null) return;
+    if (!editStudentId.trim() || !editSurname.trim() || !editFirstName.trim()) {
+      Alert.alert('Error', 'Please enter student ID, surname, and first name.');
+      return;
+    }
+    const student = sortedStudents[editStudentIndex];
     try {
-      if (!editStudentId.trim() || !editUsername.trim()) {
-        Alert.alert('Error', 'Please enter student ID and username.');
-        return;
-      }
-
-      const response = await fetch(`${API_URL}/students/update`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          studentId: editStudentId.trim(),
-          username: editUsername.trim()
-        })
+      const updated = await studentAPI.updateStudent(student._id, {
+        studentId: editStudentId.trim(),
+        surname: editSurname.trim(),
+        firstName: editFirstName.trim(),
+        middleInitial: editMiddleInitial.trim(),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update student');
-      }
-
-      // Update the student in the list
-      setStudents(prev => prev.map(s => 
-        s.studentId === editStudentId ? data.student : s
-      ));
-
-      // Clear input fields
-      setEditStudentId('');
-      setEditUsername('');
+      setStudents(prev => prev.map(s => s._id === student._id ? updated : s));
       setEditModalVisible(false);
-
-      // Show success message
-      Alert.alert('Success', `Student ${data.student.username} has been updated.`);
-
-    } catch (error: any) {
-      console.error('Error updating student:', error);
-      Alert.alert('Error', error.message || 'Failed to update student');
+      setEditStudentIndex(null);
+      setEditStudentId('');
+      setEditSurname('');
+      setEditFirstName('');
+      setEditMiddleInitial('');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update student');
     }
   };
 
@@ -252,13 +204,7 @@ const ViewClass: React.FC = () => {
     
     const student = sortedStudents[studentToDelete.index];
     try {
-      // Use the MongoDB _id instead of registration number
-      if (!student._id) {
-        Alert.alert('Error', 'Student ID not found');
-        return;
-      }
-      
-      await studentAPI.deleteStudent(student._id, classId);
+      await studentAPI.deleteStudent(student._id);
       setStudents(prev => prev.filter(s => s._id !== student._id));
       setShowDropConfirmModal(false);
       setSuccessModalMessage(`${studentToDelete.name} has been dropped successfully`);
@@ -267,8 +213,7 @@ const ViewClass: React.FC = () => {
         setShowSuccessModal(false);
       }, 2000);
     } catch (err) {
-      console.error('Error dropping student:', err);
-      Alert.alert('Error', 'Failed to drop student. Please try again.');
+      Alert.alert('Error', 'Failed to delete student');
     }
     setStudentToDelete(null);
   };
@@ -280,7 +225,6 @@ const ViewClass: React.FC = () => {
     setEditSurname(student.surname);
     setEditFirstName(student.firstName);
     setEditMiddleInitial(student.middleInitial || '');
-    setEditUsername(student.username);
     setEditModalVisible(true);
   };
 
@@ -316,7 +260,7 @@ const ViewClass: React.FC = () => {
         return newSet;
       });
     } else {
-      const index = sortedStudents.findIndex(s => s.studentId === studentId);
+      const index = sortedStudents.findIndex(s => s._id === studentId);
       setExpandedStudentIndex(expandedStudentIndex === index ? null : index);
     }
   };
@@ -326,7 +270,7 @@ const ViewClass: React.FC = () => {
       setSelectedStudents(new Set());
       setIsAllSelected(false);
     } else {
-      const allStudentIds = sortedStudents.map(s => s.studentId);
+      const allStudentIds = sortedStudents.map(s => s._id);
       setSelectedStudents(new Set(allStudentIds));
       setIsAllSelected(true);
     }
@@ -341,9 +285,7 @@ const ViewClass: React.FC = () => {
   const handleMultipleDelete = async () => {
     try {
       const selectedStudentsList = Array.from(selectedStudents);
-      const promises = selectedStudentsList.map(studentId => 
-        studentAPI.deleteStudent(studentId, classId)
-      );
+      const promises = selectedStudentsList.map(studentId => studentAPI.deleteStudent(studentId));
       
       await Promise.all(promises);
       setSuccessModalMessage(`${selectedStudents.size} student${selectedStudents.size > 1 ? 's' : ''} deleted successfully`);
@@ -419,7 +361,7 @@ const ViewClass: React.FC = () => {
 
   // Get attendance status for a student
   const getStudentAttendanceStatus = (studentId: string) => {
-    const attendance = attendanceData.find(a => a.studentId === studentId);  // Using registration number
+    const attendance = attendanceData.find(a => a.studentId === studentId);
     return attendance?.status || 'absent';
   };
 
@@ -430,28 +372,63 @@ const ViewClass: React.FC = () => {
     fetchAttendance();
   };
 
-  const renderItem = ({ item }: { item: Student }) => (
-    <View style={styles.studentItem}>
-      <View style={styles.studentInfo}>
-        <Text style={styles.studentId}>{item.studentId}</Text>
-        <Text style={styles.studentName}>{item.username}</Text>
-      </View>
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={[styles.button, styles.editButton]}
-          onPress={() => openEditModal(sortedStudents.findIndex(s => s.studentId === item.studentId))}
-        >
-          <Text style={styles.buttonText}>Edit</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, styles.removeButton]}
-          onPress={() => handleDropStudent(sortedStudents.findIndex(s => s.studentId === item.studentId))}
-        >
-          <Text style={styles.buttonText}>Remove</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const renderItem = ({ item, index }: { item: Student; index: number }) => {
+    const isExpanded = expandedStudentIndex === index;
+    const isSelected = selectedStudents.has(item._id);
+    const fullName = `${item.surname}, ${item.firstName}${item.middleInitial ? ` ${item.middleInitial}.` : ''}`;
+    const attendanceStatus = getStudentAttendanceStatus(item.studentId);
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => handleCardPress(item._id)}
+        onLongPress={() => handleLongPress(item._id)}
+        delayLongPress={500}
+        style={[
+          styles.studentCard,
+          isSelected && styles.selectedCard,
+          isExpanded && styles.expandedStudentCard
+        ]}
+      >
+        <View style={styles.studentInfo}>
+          <View style={styles.studentHeader}>
+            {isSelectionMode && (
+              <View style={styles.checkbox}>
+                <Ionicons 
+                  name={isSelected ? "checkbox" : "square-outline"} 
+                  size={24} 
+                  color={isSelected ? "#2eada6" : "#666"}
+                />
+              </View>
+            )}
+            <View style={styles.studentMainInfo}>
+              <Text style={styles.studentName}>{fullName}</Text>
+              <Text style={styles.studentId}>{item.studentId}</Text>
+            </View>
+          </View>
+          
+          {isExpanded && !isSelectionMode && (
+            <View style={styles.studentActionsExpanded}>
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={() => openEditModal(index)}
+              >
+                <Ionicons name="create-outline" size={20} color="#2eada6" />
+                <Text style={[styles.actionText, { color: '#2eada6' }]}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionButton} 
+                onPress={() => handleDropStudent(index)}
+              >
+                <Ionicons name="trash-outline" size={20} color="#ff6b6b" />
+                <Text style={[styles.actionText, { color: '#ff6b6b' }]}>Drop</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -462,83 +439,6 @@ const ViewClass: React.FC = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Student List</Text>
       </View>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-      <View style={styles.content}>
-        <View style={styles.classHeader}>
-          <Text style={styles.classInfo}>
-            {subjectCode} - {yearSection}
-          </Text>
-          <View style={styles.headerActions}>
-            {isSelectionMode ? (
-              <>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={handleSelectAll}
-                >
-                  <Ionicons
-                    name={isAllSelected ? "checkbox" : "square-outline"}
-                    size={24}
-                    color="#2eada6"
-                  />
-                  <Text style={styles.actionText}>
-                    {isAllSelected ? "Deselect All" : "Select All"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: "#ff6b6b" }]}
-                  onPress={() => setShowDeleteModal(true)}
-                >
-                  <Ionicons name="trash-outline" size={24} color="white" />
-                  <Text style={[styles.actionText, { color: "white" }]}>
-                    Delete Selected
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={exitSelectionMode}
-                >
-                  <Text style={styles.actionText}>Cancel</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: "#2eada6" }]}
-                  onPress={() => setAddModalVisible(true)}
-                >
-                  <Ionicons name="add" size={24} color="white" />
-                  <Text style={[styles.actionText, { color: "white" }]}>
-                    Add Student
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => {
-                    fetchAvailableClasses();
-                    setCloneModalVisible(true);
-                  }}
-                >
-                  <Ionicons name="copy-outline" size={24} color="#2eada6" />
-                  <Text style={styles.actionText}>Clone Students</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-
-        {loading ? (
-          <ActivityIndicator size="large" color="#2eada6" style={styles.loader} />
-        ) : students.length > 0 ? (
-          <FlatList
-            data={sortedStudents}
-            renderItem={renderItem}
-            keyExtractor={item => item.studentId}
-            style={styles.list}
-          />
-=======
       {/* Subject Code Row */}
       <View style={styles.subjectRow}>
         <Text style={styles.subjectCode}>{subjectCode}{yearSection ? ` (${yearSection})` : ''}</Text>
@@ -554,7 +454,6 @@ const ViewClass: React.FC = () => {
             />
             <Text style={styles.selectAllText}>Select All</Text>
           </TouchableOpacity>
->>>>>>> parent of 2942016 (Vibe coding)
         ) : (
           <View style={styles.actionButtons}>
             <TouchableOpacity 
@@ -741,31 +640,6 @@ const ViewClass: React.FC = () => {
             exiting={SlideOutDown.springify().damping(15)}
             style={styles.bottomDrawerContent}
           >
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Add New Student</Text>
-                <TouchableOpacity onPress={handleCloseAddModal}>
-                  <Ionicons name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Student ID"
-                value={newStudentId}
-                onChangeText={setNewStudentId}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={newUsername}
-                onChangeText={setNewUsername}
-              />
-              <TouchableOpacity
-                style={styles.submitButton}
-=======
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Add Student</Text>
             <TextInput
@@ -803,7 +677,6 @@ const ViewClass: React.FC = () => {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={[styles.modalButton, styles.saveButton]} 
->>>>>>> parent of 2942016 (Vibe coding)
                 onPress={handleAddStudent}
               >
                 <Text style={styles.modalButtonText}>Add</Text>
@@ -826,44 +699,6 @@ const ViewClass: React.FC = () => {
             exiting={SlideOutDown.springify().damping(15)}
             style={styles.bottomDrawerContent}
           >
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Edit Student</Text>
-                <TouchableOpacity onPress={handleCloseEditModal}>
-                  <Ionicons name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Student ID"
-                value={editStudentId}
-                onChangeText={setEditStudentId}
-                editable={false}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Username"
-                value={editUsername}
-                onChangeText={setEditUsername}
-              />
-              <View style={styles.modalButtons}>
-                <TouchableOpacity
-                  style={[styles.button, styles.cancelButton]}
-                  onPress={() => setEditModalVisible(false)}
-                >
-                  <Text style={styles.buttonText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.button, styles.saveButton]}
-                  onPress={handleEditStudent}
-                >
-                  <Text style={styles.buttonText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-=======
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Edit Student</Text>
             <TextInput
@@ -905,7 +740,6 @@ const ViewClass: React.FC = () => {
               >
                 <Text style={styles.modalButtonText}>Save</Text>
               </TouchableOpacity>
->>>>>>> parent of 2942016 (Vibe coding)
             </View>
           </Animated.View>
         </View>
@@ -1173,20 +1007,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     marginLeft: 8,
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    marginVertical: 16,
-=======
   actionText: {
     marginLeft: 6,
     fontSize: 14,
@@ -1198,7 +1018,6 @@ const styles = StyleSheet.create({
     color: '#aaa',
     marginTop: 40,
     fontSize: 16,
->>>>>>> parent of 2942016 (Vibe coding)
   },
   bottomDrawerOverlay: {
     flex: 1,
@@ -1238,159 +1057,15 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     marginBottom: 16,
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-    fontSize: 16,
-  },
-  submitButton: {
-    backgroundColor: '#2eada6',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  modalScrollContent: {
-    maxHeight: '70%',
-  },
-  classOption: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-=======
->>>>>>> parent of 2942016 (Vibe coding)
-=======
->>>>>>> parent of 2942016 (Vibe coding)
     borderWidth: 1,
     borderColor: '#ddd',
     color: '#333',
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  classOptionSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
-  },
-  deleteButton: {
-    backgroundColor: '#ff4444',
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  deleteButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  confirmModalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  confirmModalContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    width: '80%',
-    alignItems: 'center',
-  },
-  confirmModalText: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 20,
-    color: '#333',
-  },
-  confirmModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  cancelButton: {
-    backgroundColor: '#ddd',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  confirmButton: {
-    backgroundColor: '#ff4444',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  successModal: {
-    position: 'absolute',
-    bottom: '10%',
-    left: '10%',
-    right: '10%',
-    backgroundColor: '#4CAF50',
-    padding: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  successText: {
-    color: 'white',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  expandButton: {
-    padding: 8,
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  confirmationModal: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  confirmationContent: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    alignItems: 'center',
-  },
-  confirmationTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginVertical: 16,
-  },
-  confirmationText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  confirmationButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    gap: 12,
-=======
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
     gap: 10,
->>>>>>> parent of 2942016 (Vibe coding)
   },
   modalButton: {
     flex: 1,
@@ -1398,60 +1073,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  confirmationButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  successContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-  },
-  studentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  editButton: {
-    backgroundColor: '#2eada6',
-    padding: 8,
-    borderRadius: 6,
-  },
-  removeButton: {
-    backgroundColor: '#ff4444',
-    padding: 8,
-    borderRadius: 6,
-  },
-  button: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addForm: {
-    marginBottom: 16,
-  },
-  list: {
-    paddingBottom: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-=======
   cancelButton: {
     backgroundColor: '#9E9E9E',
   },
@@ -1763,20 +1384,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> parent of 2942016 (Vibe coding)
-  },
-  saveButton: {
-    backgroundColor: '#2eada6',
-  },
-  cancelButton: {
-    backgroundColor: '#ddd',
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
   },
 });
 

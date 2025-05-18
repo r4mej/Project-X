@@ -10,7 +10,6 @@ import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
 import AdminDashboard from '../screens/AdminScreen';
 import { AdminDrawerParamList } from './types';
-import { colors } from '../theme/colors';
 
 const Drawer = createDrawerNavigator<AdminDrawerParamList>();
 
@@ -282,14 +281,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerHeader: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: '#2eada6',
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 24,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.15)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.2)',
   },
   profileSection: {
     flex: 1,
@@ -301,11 +300,9 @@ const styles = StyleSheet.create({
     height: 80,
     marginBottom: 12,
     borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     overflow: 'hidden',
     alignSelf: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   profileImage: {
     width: '100%',
@@ -322,31 +319,31 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: colors.primary.dark,
+    backgroundColor: '#2eada6',
     borderRadius: 12,
     padding: 4,
     borderWidth: 2,
-    borderColor: colors.text.inverse,
+    borderColor: 'white',
   },
   profileInfo: {
     marginTop: 4,
     alignItems: 'center',
   },
   username: {
-    color: colors.text.inverse,
+    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 2,
     textAlign: 'center',
   },
   role: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 12,
     fontWeight: '600',
     marginBottom: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 12,
     textAlign: 'center',
   },
@@ -365,21 +362,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
+    borderBottomColor: '#f0f0f0',
   },
   drawerItemText: {
     marginLeft: 16,
     fontSize: 16,
-    color: colors.primary.main,
+    color: '#2eada6',
     fontWeight: '500',
   },
   logoutButton: {
     marginTop: 'auto',
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
+    borderTopColor: '#f0f0f0',
   },
   logoutText: {
-    color: colors.status.error,
+    color: '#ff6b6b',
   },
   notificationContainer: {
     position: 'absolute',
@@ -390,13 +387,13 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   notification: {
-    backgroundColor: colors.status.success,
+    backgroundColor: '#4CAF50',
     borderRadius: 25,
     padding: 15,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: colors.neutral.black,
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -406,7 +403,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   notificationText: {
-    color: colors.text.inverse,
+    color: 'white',
     fontSize: 16,
     fontWeight: '500',
   },

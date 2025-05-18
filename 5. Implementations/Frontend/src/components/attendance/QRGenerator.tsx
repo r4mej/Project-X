@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import * as React from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Alert, Modal, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { colors } from '../../theme/colors';
-import { qrAPI } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 
 interface QRGeneratorProps {
   visible: boolean;
@@ -19,301 +19,218 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   onClose,
   classId,
   subjectCode,
-  yearSection
+  yearSection,
 }) => {
-  const [qrData, setQRData] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null);
-  const [isOffline, setIsOffline] = useState(false);
-
-  // Function to check if we're offline
-  const checkConnectivity = async () => {
-    try {
-      await qrAPI.testConnection();
-      setIsOffline(false);
-      return true;
-    } catch (error) {
-      setIsOffline(true);
-      return false;
-    }
-  };
-
-  // Function to generate a temporary offline QR code
-  const generateOfflineQR = () => {
-    const timestamp = new Date().toISOString();
-    const offlineData = {
-      classId,
-      timestamp,
-      type: 'attendance',
-      mode: 'offline',
-      subjectCode,
-      yearSection
-    };
-    return JSON.stringify(offlineData);
-  };
-
-  const generateQR = async () => {
-    try {
-      setIsLoading(true);
-      setError('');
-      
-      // Check connectivity first
-      const isConnected = await checkConnectivity();
-      
-      if (!isConnected) {
-        console.log('Device is offline, generating offline QR code');
-        const offlineQR = generateOfflineQR();
-        setQRData(offlineQR);
-        setError('Offline Mode - Attendance will be synced when online');
-        return;
-      }
-
-      console.log('Generating QR code for class:', classId);
-      const { token } = await qrAPI.generateQRCode(classId);
-      console.log('QR code generated successfully');
-      setQRData(token);
-    } catch (err: any) {
-      console.error('Error generating QR code:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to generate QR code';
-      setError(errorMessage);
-      
-      // If server connection fails, switch to offline mode
-      console.log('Server connection failed, switching to offline mode');
-      const offlineQR = generateOfflineQR();
-      setQRData(offlineQR);
-      setError('Failed to connect to server - Using offline mode');
-      
-      Alert.alert(
-        'QR Code Generation Issue',
-        errorMessage,
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const [qrData, setQrData] = useState<string>('');
+  const qrRef = useRef<any>(null);
+  const [qrValue, setQrValue] = useState<any>(null);
 
   useEffect(() => {
     if (visible) {
-      generateQR();
-      // Refresh QR code every 4.5 minutes (since token expires in 5 minutes)
-      const interval = setInterval(generateQR, 4.5 * 60 * 1000);
-      setRefreshInterval(interval);
-    } else {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-      setQRData('');
-      setError('');
+      // Generate QR data with class information and timestamp
+      const now = new Date();
+      
+      const data = {
+        classId,
+        subjectCode,
+        yearSection,
+        className: `${subjectCode} ${yearSection || ''}`.trim(),
+        timestamp: now.toISOString(),
+        type: 'attendance'
+      };
+      
+      const qrString = JSON.stringify(data);
+      setQrData(qrString);
+      setQrValue(data);
     }
+  }, [visible, classId, subjectCode, yearSection]);
 
-    return () => {
-      if (refreshInterval) {
-        clearInterval(refreshInterval);
-      }
-    };
-  }, [visible, classId]);
+  const handleShare = async () => {
+    try {
+      // Optionally, you can generate a base64 image and share it
+      // For now, just share the code as text
+      await Share.share({
+        message: `Attendance Code for ${subjectCode} ${yearSection}:
+${qrData}`,
+      });
+      Alert.alert('Success', 'Attendance code has been shared');
+    } catch (error) {
+      console.error('Error sharing attendance code:', error);
+      Alert.alert('Error', 'Failed to share attendance code');
+    }
+  };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Attendance QR Code</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={colors.text.secondary} />
-            </TouchableOpacity>
-          </View>
+    <>
+      {/* Blur Overlay */}
+      <Modal
+        transparent={true}
+        visible={visible}
+        animationType="none"
+      >
+        <BlurView
+          intensity={50}
+          tint="dark"
+          style={StyleSheet.absoluteFill}
+        />
+      </Modal>
 
-          <View style={styles.classInfo}>
-            <Text style={styles.subjectCode}>{subjectCode}</Text>
-            <Text style={styles.yearSection}>{yearSection}</Text>
-            {isOffline && (
-              <View style={styles.offlineBadge}>
-                <Ionicons name="cloud-offline" size={16} color={colors.status.warning} />
-                <Text style={styles.offlineText}>Offline Mode</Text>
-              </View>
-            )}
-          </View>
+      {/* QR Code Modal */}
+      <Modal
+        visible={visible}
+        transparent
+        animationType="none"
+        onRequestClose={onClose}
+      >
+        <View style={styles.modalOverlay}>
+          <Animated.View 
+            entering={SlideInDown.springify().damping(15)}
+            exiting={SlideOutDown.springify().damping(15)}
+            style={styles.bottomDrawerContent}
+          >
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHandle} />
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={onClose}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.qrContainer}>
-            {isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.instructor.primary.main} />
-                <Text style={styles.loadingText}>Generating QR Code...</Text>
-              </View>
-            ) : error ? (
-              <View style={styles.errorContainer}>
-                <Ionicons 
-                  name={isOffline ? "cloud-offline" : "warning"} 
-                  size={48} 
-                  color={isOffline ? colors.status.warning : colors.status.error} 
-                />
-                <Text style={[
-                  styles.errorText,
-                  isOffline && { color: colors.status.warning }
-                ]}>{error}</Text>
-                {!isOffline && (
-                  <TouchableOpacity
-                    style={styles.retryButton}
-                    onPress={generateQR}
-                  >
-                    <Text style={styles.retryText}>Try Again</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            ) : qrData ? (
-              <>
+            <Text style={styles.modalTitle}>Attendance QR Code</Text>
+            
+            <View style={styles.qrContainer}>
+              {qrData ? (
                 <QRCode
                   value={qrData}
                   size={250}
+                  color="#2eada6"
                   backgroundColor="white"
+                  getRef={(c) => { qrRef.current = c; }}
                 />
-                <Text style={styles.instruction}>
-                  Show this QR code to your students to mark their attendance
-                </Text>
-                <Text style={styles.note}>
-                  {isOffline 
-                    ? 'QR code will work offline and sync when online'
-                    : 'QR code refreshes automatically every 4.5 minutes'
-                  }
-                </Text>
-              </>
-            ) : (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>No QR code data available</Text>
-                <TouchableOpacity
-                  style={styles.retryButton}
-                  onPress={generateQR}
-                >
-                  <Text style={styles.retryText}>Generate QR Code</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+              ) : null}
+            </View>
+
+            <View style={styles.classInfoContainer}>
+              <Text style={styles.classInfoTitle}>{subjectCode}</Text>
+              {yearSection ? (
+                <Text style={styles.classInfoSubtitle}>{yearSection}</Text>
+              ) : null}
+            </View>
+
+            <Text style={styles.instructionText}>
+              Students can scan this QR code to mark their attendance
+            </Text>
+
+            <TouchableOpacity 
+              style={styles.shareButton} 
+              onPress={handleShare}
+            >
+              <Ionicons name="share-outline" size={24} color="white" />
+              <Text style={styles.shareButtonText}>Share Code</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'transparent',
+    justifyContent: 'flex-end',
+  },
+  bottomDrawerContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  modalHeader: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+    marginBottom: 16,
   },
-  modalContent: {
-    backgroundColor: colors.surface.card,
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
-    maxWidth: 400,
-    elevation: 5,
-    shadowColor: colors.neutral.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.instructor.primary.main,
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#e0e0e0',
+    borderRadius: 2,
   },
   closeButton: {
-    padding: 5,
+    position: 'absolute',
+    right: 0,
+    top: -8,
+    padding: 8,
   },
-  classInfo: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  subjectCode: {
+  modalTitle: {
     fontSize: 20,
-    fontWeight: '600',
-    color: colors.text.primary,
-    marginBottom: 4,
-  },
-  yearSection: {
-    fontSize: 16,
-    color: colors.text.secondary,
+    fontWeight: 'bold',
+    color: '#2eada6',
+    marginBottom: 16,
+    textAlign: 'center',
   },
   qrContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 20,
-    backgroundColor: colors.surface.card,
-    borderRadius: 10,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    position: 'relative',
   },
-  instruction: {
-    marginTop: 20,
-    fontSize: 16,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  note: {
-    marginTop: 10,
-    fontSize: 14,
-    color: colors.text.secondary,
-    textAlign: 'center',
-  },
-  errorContainer: {
+  classInfoContainer: {
     alignItems: 'center',
-    padding: 20,
+    marginBottom: 16,
   },
-  errorText: {
-    marginTop: 10,
+  classInfoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  classInfoSubtitle: {
     fontSize: 16,
-    color: colors.status.error,
-    textAlign: 'center',
+    color: '#666',
+    marginTop: 4,
   },
-  retryButton: {
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    backgroundColor: colors.instructor.primary.main,
+  instructionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  shareButton: {
+    backgroundColor: '#2eada6',
+    padding: 15,
     borderRadius: 8,
-  },
-  retryText: {
-    color: colors.text.inverse,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingContainer: {
     alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: colors.text.primary,
-    textAlign: 'center',
-  },
-  offlineBadge: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.status.warningLight,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 16,
-    marginTop: 8,
+    justifyContent: 'center',
   },
-  offlineText: {
-    color: colors.status.warning,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
+  shareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });
 

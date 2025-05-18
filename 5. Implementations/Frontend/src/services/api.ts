@@ -3,65 +3,15 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { UserRole } from '../navigation/types';
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Get the local IP address for Android
-const getLocalIPAddress = () => {
-  if (Platform.OS === 'android') {
-    // Comprehensive list of common local network IPs
-    return [
-      '192.168.31.191',  // Your specific network IP
-      '192.168.1.100',
-      '192.168.0.100',
-      '192.168.1.1',     // Common router IPs
-      '192.168.0.1',
-      '10.0.2.2',        // Android emulator
-      'localhost',       // For some Android setups
-      '127.0.0.1'       // Localhost alternative
-    ];
-  } else if (Platform.OS === 'ios') {
-    return ['localhost'];
-  } else {
-    return ['localhost'];
-  }
-};
-
-// Allow both HTTP and HTTPS options with fallbacks
-const API_URLS = (() => {
-  const ips = getLocalIPAddress();
-  return ips.map(ip => `http://${ip}:5000/api`);
-})();
-=======
 // Allow both HTTP and HTTPS options with fallbacks
 // Try different connection options
 const API_URLS = [
-  Platform.OS === 'web' 
-    ? 'http://localhost:5000/api'
-    : 'http://10.0.2.2:5000/api',    // Android emulator localhost
-  Platform.OS === 'web'
-    ? 'http://127.0.0.1:5000/api'
-    : 'http://localhost:5000/api',    // iOS simulator
+  'http://localhost:5000/api',    // Standard localhost
+  'http://127.0.0.1:5000/api',    // IP address version
   'https://localhost:5000/api',   // HTTPS version (if enabled)
-  'http://192.168.1.1:5000/api',  // Common local network IP
-  'http://192.168.0.1:5000/api',  // Alternative local network IP
 ];
->>>>>>> parent of 2942016 (Vibe coding)
 
-// Maximum number of retries for failed requests
-const MAX_RETRIES = 2;  // Keep reduced retry count
-const RETRY_DELAY = 2000; // Keep increased delay
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-// Timeout configuration
-const TIMEOUT = Platform.OS === 'web' ? 10000 : 20000; // Adjusted for mobile
-
-// Create axios instance with the first URL
-=======
 // Create axios instance
->>>>>>> parent of 2942016 (Vibe coding)
 const api = axios.create({
   baseURL: API_URLS[0], // Start with the first option
   headers: {
@@ -82,19 +32,9 @@ const tryAlternativeUrls = async (config: any, originalError: any) => {
     try {
       console.log(`Trying alternative API URL: ${API_URLS[i]}`);
       const newConfig = { ...config, baseURL: API_URLS[i] };
-      const response = await axios(newConfig);
-      
-      // If successful, update the default baseURL
-      api.defaults.baseURL = API_URLS[i];
-      console.log(`Successfully switched to ${API_URLS[i]}`);
-      
-      return response;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.log(`Alternative URL ${API_URLS[i]} failed too:`, error.message);
-      } else {
-        console.log(`Alternative URL ${API_URLS[i]} failed too: Unknown error`);
-      }
+      return await axios(newConfig);
+    } catch (error) {
+      console.log(`Alternative URL ${API_URLS[i]} failed too`);
     }
   }
   
@@ -102,53 +42,15 @@ const tryAlternativeUrls = async (config: any, originalError: any) => {
   return Promise.reject(originalError);
 };
 
-// Add retry mechanism with exponential backoff
-const retryRequest = async (config: any, retryCount = 0): Promise<any> => {
-  try {
-    return await axios(config);
-  } catch (error: unknown) {
-    if (retryCount >= MAX_RETRIES) {
-      return tryAlternativeUrls(config, error);
-    }
-    
-    // Only retry on network errors or 5xx server errors
-    // Do not retry on 404s or other client errors
-    if (axios.isAxiosError(error) && (
-      !error.response || 
-      (error.response.status >= 500 && error.response.status < 600) ||
-      error.code === 'ECONNABORTED'
-    )) {
-      console.log(`Retrying request (${retryCount + 1}/${MAX_RETRIES})...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * Math.pow(2, retryCount)));
-      return retryRequest(config, retryCount + 1);
-    }
-    
-    throw error;
-  }
-};
-
 // Add error handling and retry mechanism
 api.interceptors.response.use(
   response => response,
   async error => {
-    const originalRequest = error.config;
-    
-    // Prevent infinite retry loops
-    if (originalRequest._retry) {
-      return Promise.reject(error);
+    // Network error or timeout
+    if (!error.response || error.code === 'ECONNABORTED') {
+      console.log('Connection error, trying alternative URLs');
+      return tryAlternativeUrls(error.config, error);
     }
-    
-    // Only retry on network errors, timeouts, or server errors
-    // Do not retry on 404s or other client errors
-    if (
-      !error.response || 
-      error.code === 'ECONNABORTED' || 
-      (error.response.status >= 500 && error.response.status < 600)
-    ) {
-      originalRequest._retry = true;
-      return retryRequest(originalRequest);
-    }
-    
     return Promise.reject(error);
   }
 );
@@ -315,7 +217,7 @@ export const classAPI = {
 export interface Student {
   _id: string;
   classId: string;
-  studentId: string;  // Registration number (e.g., 2023-2570)
+  studentId: string;
   surname: string;
   firstName: string;
   middleInitial?: string;
@@ -330,14 +232,12 @@ export const studentAPI = {
     const res = await api.post<Student>('/students', student);
     return res.data;
   },
-  updateStudent: async (studentId: string, student: Partial<Student>) => {
-    const res = await api.put<Student>(`/students/${studentId}`, student);
+  updateStudent: async (id: string, student: Partial<Student>) => {
+    const res = await api.put<Student>(`/students/${id}`, student);
     return res.data;
   },
-<<<<<<< HEAD
-<<<<<<< HEAD
-  deleteStudent: async (studentId: string, classId: string) => {
-    await api.delete(`/students/${studentId}`);
+  deleteStudent: async (id: string) => {
+    await api.delete(`/students/${id}`);
   },
 };
 
@@ -655,105 +555,6 @@ export const reportAPI = {
     } catch (error) {
       console.error('Error deleting report:', error);
       throw error;
-    }
-  }
-};
-
-export const qrAPI = {
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-  // Generate QR code for a class
-  async generateQRCode(classId: string): Promise<any> {
-    const response = await api.post('/qr/generate', { classId });
-    return response.data;
-  },
-
-  // Validate QR code token
-  async validateQRCode(token: string): Promise<any> {
-    const response = await api.post('/qr/validate', { token });
-    return response.data;
-  },
-
-  // Mark attendance using student QR code
-  markAttendance: async (data: { 
-    classId: string; 
-    studentId: string; 
-    timestamp: string 
-  }): Promise<any> => {
-=======
-  generateQRCode: async (classId: string) => {
->>>>>>> parent of 2942016 (Vibe coding)
-    try {
-      console.log('Generating QR code for class:', classId);
-      console.log('Using API URL:', api.defaults.baseURL);
-      
-      const token = await AsyncStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-      if (!currentUser || !currentUser.role) {
-        throw new Error('User role not found');
-      }
-
-      // Ensure role is one of the valid values
-      if (!['student', 'instructor', 'admin'].includes(currentUser.role)) {
-        throw new Error(`Invalid role: ${currentUser.role}`);
-      }
-
-      // Include userRole in request body
-      const requestData = {
-        ...data,
-        userRole: currentUser.role,
-        instructorId: currentUser._id
-      };
-      
-      console.log('Current user data:', {
-        id: currentUser._id,
-        role: currentUser.role,
-        username: currentUser.username
-      });
-      console.log('Marking attendance with data:', JSON.stringify(requestData));
-      
-      const response = await api.post('/qr/mark-attendance', requestData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'x-user-role': currentUser.role
-        }
-      });
-=======
->>>>>>> parent of 2942016 (Vibe coding)
-      
-      const response = await api.post('/qr/generate', { classId });
-      return response.data;
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      throw error;
-    }
-  },
-  
-  validateQRCode: async (token: string) => {
-    try {
-      const response = await api.post('/qr/validate', { token });
-      return response.data;
-    } catch (error) {
-      console.error('Error validating QR code:', error);
-      throw error;
-    }
-  },
-
-  testConnection: async () => {
-    try {
-      const response = await api.get('/qr/test');
-      return true;
-    } catch (error) {
-      console.error('QR API connection test failed:', error);
-      return false;
     }
   }
 };

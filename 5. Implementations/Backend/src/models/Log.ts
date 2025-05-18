@@ -7,7 +7,7 @@ if (mongoose.models.Log) {
 
 export interface ILog extends Document {
   userId: mongoose.Types.ObjectId;
-  username: string;  // This will store the user's registration number (userId)
+  username: string;
   role: string;
   sessionId: string;
   action: 'LOGIN' | 'LOGOUT';
@@ -24,7 +24,7 @@ export interface ILog extends Document {
 
 const LogSchema: Schema = new Schema({
   userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  username: { type: String, required: true },  // Will store user's registration number
+  username: { type: String, required: true },
   role: { type: String, required: true },
   sessionId: { 
     type: String, 
