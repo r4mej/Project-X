@@ -289,9 +289,17 @@ export interface Student {
   _id: string;
   classId: string;
   studentId: string;
-  surname: string;
   firstName: string;
+  lastName: string;
   middleInitial?: string;
+  email: string;
+  yearLevel: string;
+  course: string;
+  attendanceStats?: {
+    present: number;
+    absent: number;
+    late: number;
+  };
 }
 
 export const studentAPI = {
@@ -299,17 +307,17 @@ export const studentAPI = {
     const res = await api.get<Student[]>(`/students/${classId}`);
     return res.data;
   },
-  addStudent: async (student: Omit<Student, '_id'>) => {
+  addStudent: async (student: Omit<Student, '_id' | 'attendanceStats'>) => {
     const res = await api.post<Student>('/students', student);
     return res.data;
   },
-  updateStudent: async (id: string, student: Partial<Student>) => {
+  updateStudent: async (id: string, student: Partial<Omit<Student, '_id'>>) => {
     const res = await api.put<Student>(`/students/${id}`, student);
     return res.data;
   },
   deleteStudent: async (id: string) => {
     await api.delete(`/students/${id}`);
-  },
+  }
 };
 
 export interface Attendance {

@@ -13,8 +13,35 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
-    const { classId, studentId, surname, firstName, middleInitial } = req.body;
-    const student = new Student({ classId, studentId, surname, firstName, middleInitial });
+    const { 
+      classId, 
+      studentId, 
+      firstName, 
+      lastName, 
+      middleInitial, 
+      email,
+      yearLevel,
+      course 
+    } = req.body;
+
+    // Validate required fields
+    if (!classId || !studentId || !firstName || !lastName || !email || !yearLevel || !course) {
+      return res.status(400).json({ 
+        error: 'Missing required fields. Required: classId, studentId, firstName, lastName, email, yearLevel, course' 
+      });
+    }
+
+    const student = new Student({ 
+      classId, 
+      studentId, 
+      firstName, 
+      lastName, 
+      middleInitial,
+      email,
+      yearLevel,
+      course
+    });
+    
     await student.save();
     res.status(201).json(student);
   } catch (err) {

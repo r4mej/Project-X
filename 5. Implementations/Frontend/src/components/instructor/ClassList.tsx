@@ -118,16 +118,23 @@ const ViewClass: React.FC = () => {
 
   // Sort students by surname
   const sortedStudents = [...students].sort((a, b) => {
-    const getSurname = (s: Student) => s.surname.trim().toLowerCase();
-    const comparison = getSurname(a).localeCompare(getSurname(b));
+    const getLastName = (s: Student) => s.lastName.trim().toLowerCase();
+    const comparison = getLastName(a).localeCompare(getLastName(b));
     return sortAscending ? comparison : -comparison;
   });
 
   const handleAddStudent = async () => {
     if (!newStudentId.trim() || !newSurname.trim() || !newFirstName.trim()) {
-      Alert.alert('Error', 'Please enter student ID, surname, and first name.');
+      Alert.alert('Error', 'Please enter student ID, last name, and first name.');
       return;
     }
+
+    // Validate student ID format
+    if (!/^\d{4}-\d{4}$/.test(newStudentId.trim())) {
+      Alert.alert('Error', 'Student ID must be in format: YYYY-XXXX');
+      return;
+    }
+
     try {
       // Debug: Check if we have a token
       const token = await AsyncStorage.getItem('token');
@@ -139,11 +146,15 @@ const ViewClass: React.FC = () => {
       const newStudent = await studentAPI.addStudent({
         classId,
         studentId: newStudentId.trim(),
-        surname: newSurname.trim(),
         firstName: newFirstName.trim(),
+        lastName: newSurname.trim(), // Use newSurname as lastName
         middleInitial: newMiddleInitial.trim(),
+        email: `${newStudentId.trim().toLowerCase()}@student.example.com`,
+        yearLevel: yearSection?.split('-')[0] || '1st Year', // Extract year level from yearSection or use default
+        course: subjectCode?.split(' ')[0] || 'BSIT', // Extract course from subjectCode or use default
       });
 
+      // Update the students list with the new student
       setStudents(prev => [...prev, newStudent]);
       
       // Clear form and close modal
@@ -154,7 +165,7 @@ const ViewClass: React.FC = () => {
       setAddModalVisible(false);
 
       // Show success modal
-      const studentName = `${newStudent.surname}, ${newStudent.firstName}${newStudent.middleInitial ? ' ' + newStudent.middleInitial + '.' : ''}`;
+      const studentName = `${newStudent.lastName}, ${newStudent.firstName}${newStudent.middleInitial ? ' ' + newStudent.middleInitial + '.' : ''}`;
       setSuccessModalMessage(`${studentName} has been added successfully`);
       setShowSuccessModal(true);
       setTimeout(() => {
@@ -162,25 +173,31 @@ const ViewClass: React.FC = () => {
       }, 2000);
     } catch (err) {
       console.error('Add student error:', err);
-      Alert.alert('Error', 'Failed to add student. Please check if you are logged in.');
+      Alert.alert('Error', 'Failed to add student. Please check all required fields and try again.');
     }
   };
 
   const handleEditStudent = async () => {
     if (editStudentIndex === null) return;
     if (!editStudentId.trim() || !editSurname.trim() || !editFirstName.trim()) {
-      Alert.alert('Error', 'Please enter student ID, surname, and first name.');
+      Alert.alert('Error', 'Please enter student ID, last name, and first name.');
       return;
     }
     const student = sortedStudents[editStudentIndex];
     try {
-      const updated = await studentAPI.updateStudent(student._id, {
+      const updatedStudent = {
+        ...student,
         studentId: editStudentId.trim(),
-        surname: editSurname.trim(),
+        lastName: editSurname.trim(),
         firstName: editFirstName.trim(),
         middleInitial: editMiddleInitial.trim(),
-      });
+      };
+
+      const updated = await studentAPI.updateStudent(student._id, updatedStudent);
+      
+      // Update the students list with the updated student
       setStudents(prev => prev.map(s => s._id === student._id ? updated : s));
+      
       setEditModalVisible(false);
       setEditStudentIndex(null);
       setEditStudentId('');
@@ -188,13 +205,14 @@ const ViewClass: React.FC = () => {
       setEditFirstName('');
       setEditMiddleInitial('');
     } catch (err) {
-      Alert.alert('Error', 'Failed to update student');
+      console.error('Edit student error:', err);
+      Alert.alert('Error', 'Failed to update student information.');
     }
   };
 
   const handleDropStudent = async (index: number) => {
     const student = sortedStudents[index];
-    const studentName = `${student.surname}, ${student.firstName}${student.middleInitial ? ' ' + student.middleInitial + '.' : ''}`;
+    const studentName = `${student.lastName}, ${student.firstName}${student.middleInitial ? ' ' + student.middleInitial + '.' : ''}`;
     setStudentToDelete({ index, name: studentName });
     setShowDropConfirmModal(true);
   };
@@ -222,7 +240,7 @@ const ViewClass: React.FC = () => {
     setEditStudentIndex(index);
     const student = sortedStudents[index];
     setEditStudentId(student.studentId);
-    setEditSurname(student.surname);
+    setEditSurname(student.lastName);
     setEditFirstName(student.firstName);
     setEditMiddleInitial(student.middleInitial || '');
     setEditModalVisible(true);
@@ -319,9 +337,12 @@ const ViewClass: React.FC = () => {
           studentAPI.addStudent({
             classId: selectedTargetClass,
             studentId: student.studentId,
-            surname: student.surname,
+            lastName: student.lastName,  // Use surname from UI model as lastName for API
             firstName: student.firstName,
             middleInitial: student.middleInitial || '',
+            email: `${student.studentId.toLowerCase()}@student.example.com`,
+            yearLevel: '1st Year',
+            course: 'BSIT',
           })
         )
       );
@@ -375,7 +396,7 @@ const ViewClass: React.FC = () => {
   const renderItem = ({ item, index }: { item: Student; index: number }) => {
     const isExpanded = expandedStudentIndex === index;
     const isSelected = selectedStudents.has(item._id);
-    const fullName = `${item.surname}, ${item.firstName}${item.middleInitial ? ` ${item.middleInitial}.` : ''}`;
+    const fullName = `${item.lastName}, ${item.firstName}${item.middleInitial ? ` ${item.middleInitial}.` : ''}`;
     const attendanceStatus = getStudentAttendanceStatus(item.studentId);
 
     return (
@@ -651,7 +672,7 @@ const ViewClass: React.FC = () => {
             />
             <TextInput
               style={styles.input}
-              placeholder="Surname"
+              placeholder="Last Name"
               value={newSurname}
               onChangeText={setNewSurname}
             />
@@ -710,7 +731,7 @@ const ViewClass: React.FC = () => {
             />
             <TextInput
               style={styles.input}
-              placeholder="Surname"
+              placeholder="Last Name"
               value={editSurname}
               onChangeText={setEditSurname}
             />
