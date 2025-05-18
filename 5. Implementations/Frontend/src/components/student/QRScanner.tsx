@@ -468,19 +468,14 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
             });
             return; // Exit if successful
           } catch (e2) {
-            // No standard scanner found, try to open general barcode intent
-            try {
-              // Try general barcode intent
-              await Linking.openURL('market://search?q=barcode+scanner&c=apps');
-              return;
-            } catch (e3) {
-              // All attempts failed, fallback to our scanner
-              setShowScanner(true);
-            }
+            // No standard scanner found, use our built-in scanner
+            console.log('No system QR scanner available, using built-in scanner');
+            setShowScanner(true);
           }
         }
       } catch (error) {
         // Fallback to built-in scanner
+        console.log('Error launching native scanner:', error);
         setShowScanner(true);
       }
     } else if (isIOS) {
