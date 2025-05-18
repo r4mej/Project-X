@@ -12,6 +12,7 @@ import ClassManager, { Class } from '../components/instructor/ClassManager';
 import QRGenerator from '../components/instructor/QRGenerator';
 import SubjectSelectionDrawer from '../components/instructor/SubjectSelectionDrawer';
 import { useAuth } from '../context/AuthContext';
+import { useRefresh } from '../context/RefreshContext';
 import { InstructorBottomTabParamList, InstructorDrawerParamList, RootStackParamList } from '../navigation/types';
 import { classAPI, reportAPI } from '../services/api';
 
@@ -55,6 +56,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
 
 const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: string; present: number; absent: number; }[] }> = ({ classes, attendanceData }) => {
   const { user } = useAuth();
+  const { refreshKey } = useRefresh();
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [todayClasses, setTodayClasses] = useState<Class[]>([]);
@@ -74,7 +76,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   useEffect(() => {
     filterTodayClasses();
     calculateClassOverview();
-  }, [classes]);
+  }, [classes, refreshKey]);
 
   const getDayAbbreviation = (fullDay: string): string => {
     switch (fullDay.toUpperCase()) {
@@ -426,13 +428,14 @@ const InstructorScreen: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState('Dashboard');
   const { user, login } = useAuth();
+  const { refreshKey } = useRefresh();
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkStoredCredentials();
     fetchClasses();
-  }, []);
+  }, [refreshKey]);
 
   const checkStoredCredentials = async () => {
     try {

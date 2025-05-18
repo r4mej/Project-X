@@ -10,6 +10,7 @@ import MyClasses from '../components/student/MyClasses';
 import QRScanScreen from '../components/student/QRScanner';
 import RecordsScreen from '../components/student/StudentRecord';
 import { useAuth } from '../context/AuthContext';
+import { useRefresh } from '../context/RefreshContext';
 import { StudentBottomTabParamList, StudentDrawerParamList } from '../navigation/types';
 import { Attendance, attendanceAPI, classAPI, studentAPI } from '../services/api';
 
@@ -80,6 +81,7 @@ interface ClassSchedule {
 const StudentDashboard: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
+  const { refreshKey } = useRefresh();
   const [loading, setLoading] = useState(true);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [classes, setClasses] = useState<any[]>([]);
@@ -106,7 +108,7 @@ const StudentDashboard: React.FC = () => {
       fetchTodaySchedule();
     }
     fetchClasses();
-  }, [user]);
+  }, [user, refreshKey]);
 
   const fetchAttendanceData = async () => {
     try {

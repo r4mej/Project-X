@@ -10,6 +10,7 @@ import ManageUser from '../components/admin/UserManager';
 import QuickViewClasses from '../components/instructor/QuickViewClasses';
 import QuickViewUsers from '../components/instructor/QuickViewUsers';
 import { useAuth } from '../context/AuthContext';
+import { useRefresh } from '../context/RefreshContext';
 import { AdminBottomTabParamList, AdminDrawerParamList, UserRole } from '../navigation/types';
 import { classAPI, logAPI, userAPI } from '../services/api';
 
@@ -76,6 +77,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
 
 const AdminDashboard: React.FC = () => {
   const navigation = useNavigation<DrawerNavigationProp<AdminDrawerParamList>>();
+  const { refreshKey } = useRefresh();
   const [users, setUsers] = useState<User[]>([]);
   const [systemStats, setSystemStats] = useState<SystemStats>({
     totalUsers: 0,
@@ -146,7 +148,7 @@ const AdminDashboard: React.FC = () => {
     // Refresh data every 5 minutes
     const interval = setInterval(fetchUsers, 300000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshKey]);
 
   const studentPercentage = Math.round((systemStats.studentCount / systemStats.totalUsers) * 100) || 0;
   const instructorPercentage = Math.round((systemStats.instructorCount / systemStats.totalUsers) * 100) || 0;

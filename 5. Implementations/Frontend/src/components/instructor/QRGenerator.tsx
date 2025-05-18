@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
+import { useRefresh } from '../../context/RefreshContext';
 import { Alert, Modal, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
@@ -24,6 +25,7 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   const [qrData, setQrData] = useState<string>('');
   const qrRef = useRef<any>(null);
   const [qrValue, setQrValue] = useState<any>(null);
+  const { triggerRefresh } = useRefresh();
 
   useEffect(() => {
     if (visible) {
@@ -44,6 +46,9 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
       const qrString = JSON.stringify(data);
       setQrData(qrString);
       setQrValue(data);
+      
+      // Trigger refresh when generating a new QR code
+      triggerRefresh();
     }
   }, [visible, classId, subjectCode, yearSection]);
 

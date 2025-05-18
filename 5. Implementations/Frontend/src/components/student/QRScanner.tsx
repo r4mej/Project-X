@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { StudentDrawerParamList } from '../../navigation/types';
+import { useRefresh } from '../../context/RefreshContext';
 import { attendanceAPI, authAPI } from '../../services/api';
 
 // Import webcam for web platform
@@ -44,6 +45,7 @@ interface QRScanScreenProps {
 
 const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
   const navigation = useNavigation<NavigationProp>();
+  const { triggerRefresh } = useRefresh();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [confirmationCode, setConfirmationCode] = useState<string | null>(null);
@@ -163,6 +165,9 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
       
       // Show success message
       setShowSuccess(true);
+      
+      // Trigger refresh to update dashboard data
+      triggerRefresh();
       
       // Hide success message after 3 seconds
       setTimeout(() => {
@@ -384,6 +389,10 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         
         // Show success notification
         setShowSuccess(true);
+        
+        // Trigger refresh to update dashboard data
+        triggerRefresh();
+        
         setTimeout(() => {
           setShowSuccess(false);
         }, 3000);
