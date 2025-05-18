@@ -55,7 +55,8 @@ app.get('/api/test', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT}`);
   console.log(`Test the API at http://localhost:${PORT}/api/test`);
+  console.log(`For devices on your network, access via http://192.168.31.191:${PORT}/api/test`);
 }); 

@@ -183,36 +183,38 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
         try {
           const imageSrc = webcamRef.current.getScreenshot();
           if (imageSrc) {
-            // Use window.Image for web platform
-            const image = new window.Image();
-            image.src = imageSrc;
-            
-            image.onload = () => {
-              try {
-                const canvas = document.createElement('canvas');
-                canvas.width = image.width;
-                canvas.height = image.height;
-                const context = canvas.getContext('2d');
-                
-                if (context) {
-                  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-                  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            // Use platform-independent approach
+            if (Platform.OS === 'web') {
+              const image = new Image();  // Web's Image constructor
+              image.src = imageSrc;
+              
+              image.onload = () => {
+                try {
+                  const canvas = document.createElement('canvas');
+                  canvas.width = image.width;
+                  canvas.height = image.height;
+                  const context = canvas.getContext('2d');
                   
-                  const code = jsQR(imageData.data, imageData.width, imageData.height);
-                  
-                  if (code) {
-                    // QR code found - handle it
-                    console.log('QR Code detected:', code.data);
-                    handleQRCodeData(code.data);
+                  if (context) {
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                      // QR code found - handle it
+                      console.log('QR Code detected:', code.data);
+                      handleQRCodeData(code.data);
+                    }
                   }
+                } catch (err) {
+                  console.error('Error processing QR:', err);
+                  setErrorMessage('Error scanning QR code. Please try again.');
+                  setShowError(true);
+                  setTimeout(() => setShowError(false), 3000);
                 }
-              } catch (err) {
-                console.error('Error processing QR:', err);
-                setErrorMessage('Error scanning QR code. Please try again.');
-                setShowError(true);
-                setTimeout(() => setShowError(false), 3000);
-              }
-            };
+              };
+            }
           }
         } catch (e) {
           console.error('Screenshot error:', e);

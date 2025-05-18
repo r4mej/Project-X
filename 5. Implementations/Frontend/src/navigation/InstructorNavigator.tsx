@@ -11,10 +11,32 @@ import SuccessModal from '../components/SuccessModal';
 import { useAuth } from '../context/AuthContext';
 import InstructorDashboard from '../screens/InstructorScreen';
 import { InstructorDrawerParamList } from './types';
+import * as ImagePicker from 'expo-image-picker';
 
 const Drawer = createDrawerNavigator<InstructorDrawerParamList>();
 
 const PROFILE_IMAGE_KEY = '@instructor_profile_image';
+
+// Define interfaces for global types
+interface Schedule {
+  startTime: string;
+  endTime: string;
+  startPeriod: 'AM' | 'PM';
+  endPeriod: 'AM' | 'PM';
+}
+
+interface ClassItem {
+  _id: string;
+  subjectCode: string;
+  className: string;
+  yearSection?: string;
+  schedules: Schedule[];
+}
+
+// Extend global to include todayClasses
+declare global {
+  var todayClasses: ClassItem[] | undefined;
+}
 
 interface Notification {
   id: string;
@@ -30,7 +52,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
@@ -51,11 +72,11 @@ const CustomDrawerContent = ({ navigation }: any) => {
     const currentHour = currentTime.getHours();
     const currentMinute = currentTime.getMinutes();
 
-    // Get today's schedule from InstructorScreen's todayClasses
-    const todayClasses = window.todayClasses || [];
+    // Get today's schedule without using window directly
+    const todayClasses: ClassItem[] = global.todayClasses || [];
 
-    const newNotifications: Notification[] = todayClasses.flatMap(classItem => {
-      return classItem.schedules.map((schedule) => {
+    const newNotifications: Notification[] = todayClasses.flatMap((classItem: ClassItem) => {
+      return classItem.schedules.map((schedule: Schedule) => {
         const [startHour, startMinute] = schedule.startTime.split(':').map(Number);
         const [endHour, endMinute] = schedule.endTime.split(':').map(Number);
         const adjustedStartHour = schedule.startPeriod === 'PM' && startHour !== 12 ? startHour + 12 : startHour;
@@ -105,7 +126,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
           read: false
         };
       });
-    }).filter((notification): notification is Notification => notification !== null);
+    }).filter((notification: any): notification is Notification => notification !== null);
 
     setNotifications(newNotifications);
   };
@@ -141,9 +162,28 @@ const CustomDrawerContent = ({ navigation }: any) => {
     }
   };
 
-  const handleImageUpload = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleImageUpload = async () => {
+    // Ask for permission first
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    
+    if (status !== 'granted') {
+      Alert.alert('Permission Required', 'Please grant camera roll permissions to upload an image');
+      return;
+    }
+    
+    // Launch image picker
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    
+    if (!result.canceled && result.assets && result.assets[0]) {
+      const imageUri = result.assets[0].uri;
+      setProfileImage(imageUri);
+      await saveProfileImage(imageUri);
+      showSuccessNotification('Profile picture updated successfully');
     }
   };
 
@@ -153,30 +193,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
     setTimeout(() => {
       setShowNotification(false);
     }, 2000);
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        Alert.alert('Error', 'Image size should be less than 5MB');
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        Alert.alert('Error', 'Please upload an image file');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const imageUri = e.target?.result as string;
-        setProfileImage(imageUri);
-        await saveProfileImage(imageUri);
-        showSuccessNotification('Profile picture updated successfully');
-      };
-      reader.readAsDataURL(file);
-    }
   };
 
   const handleRemoveImage = async () => {
@@ -248,13 +264,6 @@ const CustomDrawerContent = ({ navigation }: any) => {
             <Text style={styles.role}>{user?.role?.toUpperCase() || 'INSTRUCTOR'}</Text>
             <Text style={styles.instructorId}>ID: {user?.userId || 'T-0000'}</Text>
           </View>
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileChange}
-            accept="image/*"
-            style={{ display: 'none' }}
-          />
         </View>
         <TouchableOpacity
           style={styles.closeButton}

@@ -2,9 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { Platform } from 'react-native';
 import { UserRole } from '../navigation/types';
+import { API_URL } from '../config';
 
 //const BASE_URL = 'https://triple-threat-plus-one.onrender.com/api';
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = API_URL;
 
 // Helper function to store auth data
 const storeAuthData = async (token: string, userData: any) => {
@@ -353,7 +354,18 @@ export const attendanceAPI = {
         console.error('Render connection failed:', renderError);
       }
       
-      // Step 2: Try local development fallback
+      // Step 2: Try your specific IP address
+      try {
+        console.log('Testing connection to local IP...');
+        const ipResponse = await axios.get('http://192.168.31.191:5000/');
+        console.log('Local IP connection successful:', ipResponse.data);
+        api.defaults.baseURL = 'http://192.168.31.191:5000/api';
+        return true;
+      } catch (ipError) {
+        console.error('Local IP connection failed:', ipError);
+      }
+
+      // Step 3: Try local development fallback
       try {
         const localResponse = await axios.get('http://localhost:5000/');
         console.log('Local connection successful:', localResponse.data);
@@ -363,7 +375,7 @@ export const attendanceAPI = {
         console.error('Local connection failed');
       }
       
-      // Step 3: Try alternative local
+      // Step 4: Try alternative local
       try {
         const altResponse = await axios.get('http://127.0.0.1:5000/');
         console.log('Alternative local connection successful:', altResponse.data);
