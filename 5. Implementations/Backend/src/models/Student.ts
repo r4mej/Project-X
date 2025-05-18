@@ -17,11 +17,11 @@ export interface IStudent extends Document {
 }
 
 const StudentSchema: Schema = new Schema({
-  studentId: { type: String, required: true, unique: true },
+  studentId: { type: String, required: true },
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   middleInitial: { type: String },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   classId: { type: Schema.Types.ObjectId, ref: 'Class', required: true },
   yearLevel: { type: String, required: true },
   course: { type: String, required: true },
@@ -34,8 +34,10 @@ const StudentSchema: Schema = new Schema({
   timestamps: true
 });
 
-// Create compound indexes
-StudentSchema.index({ studentId: 1, classId: 1 });
+// Create compound unique index to prevent duplicates in the same class
+StudentSchema.index({ studentId: 1, classId: 1 }, { unique: true });
+
+// Non-unique index on email for faster lookups
 StudentSchema.index({ email: 1 });
 
 export default mongoose.model<IStudent>('Student', StudentSchema); 
