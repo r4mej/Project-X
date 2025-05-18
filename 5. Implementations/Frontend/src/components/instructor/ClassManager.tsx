@@ -609,7 +609,7 @@ const AttendanceManager: React.FC = () => {
             >
               <TextInput
                 style={styles.input}
-                placeholder="Class Name (e.g., Web Development)"
+                placeholder="Class Name (e.g., ITC 130)"
                 placeholderTextColor="#999"
                 value={className}
                 onChangeText={setClassName}
