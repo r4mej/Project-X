@@ -5,6 +5,7 @@ import { connectDB } from './config/database';
 import attendanceRoutes from './routes/attendanceRoutes';
 import authRoutes from './routes/authRoutes';
 import classRoutes from './routes/classRoutes';
+import instructorDeviceRoutes from './routes/instructorDeviceRoutes';
 import logRoutes from './routes/logRoutes';
 import reportRoutes from './routes/reportRoutes';
 import studentRoutes from './routes/studentRoutes';
@@ -31,6 +32,7 @@ app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/logs', logRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/instructor-devices', instructorDeviceRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
@@ -49,7 +51,8 @@ app.get('/api/test', (req, res) => {
       '/api/classes',
       '/api/students',
       '/api/attendance',
-      '/api/reports'
+      '/api/reports',
+      '/api/instructor-devices'
     ]
   });
 });

@@ -4,7 +4,7 @@ import { BottomTabNavigationProp, createBottomTabNavigator } from '@react-naviga
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Dimensions, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Dimensions, Linking, Modal, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import ClassScheduleCalendar from '../components/ClassScheduleCalendar';
 import MyClasses from '../components/student/MyClasses';
 import QRScanScreen from '../components/student/QRScanner';
@@ -12,7 +12,7 @@ import RecordsScreen from '../components/student/StudentRecord';
 import { useAuth } from '../context/AuthContext';
 import { useRefresh } from '../context/RefreshContext';
 import { StudentBottomTabParamList, StudentDrawerParamList } from '../navigation/types';
-import { Attendance, attendanceAPI, classAPI, studentAPI } from '../services/api';
+import { Attendance, attendanceAPI, classAPI, instructorDeviceAPI, studentAPI, userAPI } from '../services/api';
 
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<StudentDrawerParamList>,
@@ -101,6 +101,16 @@ const StudentDashboard: React.FC = () => {
     timestamp: string;
   } | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [instructorList, setInstructorList] = useState<{userId: string, username: string}[]>([]);
+  const [showInstructorModal, setShowInstructorModal] = useState(false);
+  const [selectedInstructor, setSelectedInstructor] = useState<{userId: string, username: string} | null>(null);
+  const [instructorLocation, setInstructorLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number;
+    timestamp: Date;
+  } | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
   useEffect(() => {
     if (user?.userId) {
@@ -122,6 +132,106 @@ const StudentDashboard: React.FC = () => {
       }, 500);
     }
   }, [refreshKey]);
+
+  // Add a new useEffect to fetch instructors
+  useEffect(() => {
+    if (user?.userId) {
+      fetchInstructors();
+    }
+  }, [user]);
+
+  const fetchInstructors = async () => {
+    try {
+      let instructorList: {userId: string, username: string}[] = [];
+      
+      try {
+        // First try to get all users who are instructors
+        const instructorUsers = await userAPI.getUsers();
+        
+        // Filter users with instructor role
+        instructorList = instructorUsers
+          .filter((user: any) => user.role === 'instructor')
+          .map((instructor: any) => ({
+            userId: instructor.userId,
+            username: instructor.username
+          }));
+        
+        // If we have instructors, use them
+        if (instructorList.length > 0) {
+          setInstructorList(instructorList);
+          return; // Exit early if we found instructors this way
+        }
+      } catch (userApiError) {
+        // Silently fail if user doesn't have permission to get all users
+        console.log('Falling back to class-based instructor fetching');
+      }
+      
+      // Fallback to getting instructors from classes
+      const classesData = await classAPI.getClasses();
+      
+      // Debug: Log the first class to see its structure
+      if (classesData && classesData.length > 0) {
+        console.log('Class data structure sample:', classesData[0]);
+      } else {
+        console.log('No classes found');
+      }
+      
+      // Extract unique instructors from classes (with more comprehensive field checking)
+      const instructors = new Map();
+      classesData.forEach((classItem: any) => {
+        // Check for direct instructor fields
+        if (classItem.instructorId && classItem.instructorName) {
+          instructors.set(classItem.instructorId, {
+            userId: classItem.instructorId,
+            username: classItem.instructorName
+          });
+        } 
+        // Check for instructor field
+        else if (classItem.instructor) {
+          // If instructor is a string, use it as the name
+          if (typeof classItem.instructor === 'string') {
+            // Generate a userId from the name if needed
+            const instructorId = `instructor_${classItem.instructor.replace(/\s+/g, '_').toLowerCase()}`;
+            instructors.set(instructorId, {
+              userId: instructorId,
+              username: classItem.instructor
+            });
+          }
+          // If instructor is an object, extract id and name
+          else if (typeof classItem.instructor === 'object' && classItem.instructor !== null) {
+            const id = classItem.instructor._id || classItem.instructor.userId || classItem.instructor.id;
+            const name = classItem.instructor.name || classItem.instructor.username;
+            
+            if (id && name) {
+              instructors.set(id, {
+                userId: id,
+                username: name
+              });
+            }
+          }
+        }
+      });
+      
+      // Convert Map to array
+      const extractedInstructors = Array.from(instructors.values());
+      if (extractedInstructors.length > 0) {
+        setInstructorList(extractedInstructors);
+      } else {
+        console.warn('No instructors found in users or classes');
+        
+        // Last resort: Create a default list of active instructors
+        const defaultInstructors = [
+          { userId: 'default_instructor_1', username: 'Prof. Smith' },
+          { userId: 'default_instructor_2', username: 'Prof. Johnson' }
+        ];
+        setInstructorList(defaultInstructors);
+        console.log('Using default instructor list as fallback');
+      }
+    } catch (error) {
+      console.error('Error fetching instructors:', error);
+      // Don't show alert to user for this background operation
+    }
+  };
 
   const fetchAttendanceData = async () => {
     try {
@@ -341,11 +451,13 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  const handleQuickAction = (action: 'scan' | 'schedule') => {
-    if (action === 'schedule') {
-      setShowScheduleModal(true);
-    } else {
+  const handleQuickAction = (action: 'scan' | 'schedule' | 'track') => {
+    if (action === 'scan') {
       setShowQRScanner(true);
+    } else if (action === 'schedule') {
+      setShowScheduleModal(true);
+    } else if (action === 'track') {
+      setShowInstructorModal(true);
     }
   };
 
@@ -391,6 +503,74 @@ const StudentDashboard: React.FC = () => {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  // Track instructor location
+  const trackInstructor = async (instructor: {userId: string, username: string}) => {
+    try {
+      setSelectedInstructor(instructor);
+      setIsLoadingLocation(true);
+      
+      // If using a default instructor (has default_ prefix), show appropriate message
+      if (instructor.userId.startsWith('default_')) {
+        setShowInstructorModal(false);
+        Alert.alert(
+          'Demo Mode', 
+          `This is a demonstration feature. In a production environment, you would see ${instructor.username}'s real-time location.`,
+          [{ text: 'OK', style: 'default' }]
+        );
+        return;
+      }
+      
+      const location = await instructorDeviceAPI.getInstructorLocation(instructor.userId);
+      
+      if (!location) {
+        throw new Error('No location data available');
+      }
+      
+      setInstructorLocation(location);
+      
+      // Open maps app with the location
+      if (location && location.latitude && location.longitude) {
+        const scheme = Platform.select({ ios: 'maps:', android: 'geo:' });
+        const latLng = `${location.latitude},${location.longitude}`;
+        const label = `${instructor.username}'s Location`;
+        const url = Platform.select({
+          ios: `${scheme}?q=${label}&ll=${latLng}`,
+          android: `${scheme}0,0?q=${latLng}(${label})`
+        });
+        
+        if (url) {
+          const supported = await Linking.canOpenURL(url);
+          
+          if (supported) {
+            await Linking.openURL(url);
+          } else {
+            Alert.alert('Maps App', 'Could not open maps application. Please make sure you have a maps app installed.');
+          }
+        }
+      } else {
+        throw new Error('Invalid location data');
+      }
+    } catch (error: any) {
+      console.error('Error tracking instructor:', error);
+      
+      // Close the modal first for better UX
+      setShowInstructorModal(false);
+      
+      // Show more specific and helpful error messages
+      if (error.response?.status === 404) {
+        Alert.alert('Location Unavailable', `${instructor.username} has no registered devices for tracking.`);
+      } else if (error.response?.data?.message) {
+        Alert.alert('Location Error', error.response.data.message);
+      } else if (error.message) {
+        Alert.alert('Location Error', error.message);
+      } else {
+        Alert.alert('Error', 'Could not retrieve instructor location. Please try again later.');
+      }
+    } finally {
+      setIsLoadingLocation(false);
+    }
   };
 
   if (loading) {
@@ -495,18 +675,25 @@ const StudentDashboard: React.FC = () => {
             <Text style={styles.subTitle}>Access frequently used features</Text>
             <View style={styles.actionButtonsRow}>
               <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
+                style={styles.actionButton}
                 onPress={() => handleQuickAction('scan')}
               >
                 <Ionicons name="qr-code" size={22} color="#2eada6" />
-                <Text style={[styles.actionText, { color: '#2eada6' }]}>Scan QR</Text>
+                <Text style={styles.actionText}>Scan QR</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
+                style={styles.actionButton}
                 onPress={() => handleQuickAction('schedule')}
               >
                 <Ionicons name="calendar" size={22} color="#2eada6" />
-                <Text style={[styles.actionText, { color: '#2eada6' }]}>Schedule</Text>
+                <Text style={styles.actionText}>Schedule</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => handleQuickAction('track')}
+              >
+                <Ionicons name="person" size={22} color="#2eada6" />
+                <Text style={styles.actionText}>Track Instructor</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -620,6 +807,50 @@ const StudentDashboard: React.FC = () => {
         visible={showQRScanner}
         onClose={() => setShowQRScanner(false)}
       />
+
+      {/* Instructor Selection Modal */}
+      <Modal
+        visible={showInstructorModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowInstructorModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Instructor</Text>
+              <TouchableOpacity onPress={() => setShowInstructorModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            {isLoadingLocation ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2eada6" />
+                <Text style={styles.loadingText}>Getting instructor location...</Text>
+              </View>
+            ) : instructorList.length === 0 ? (
+              <Text style={styles.noInstructorsText}>No instructors available</Text>
+            ) : (
+              instructorList.map((instructor) => (
+                <TouchableOpacity
+                  key={instructor.userId}
+                  style={styles.instructorItem}
+                  onPress={() => {
+                    trackInstructor(instructor);
+                  }}
+                >
+                  <View style={styles.instructorInfo}>
+                    <Ionicons name="person" size={24} color="#2eada6" />
+                    <Text style={styles.instructorName}>{instructor.username}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -1097,30 +1328,79 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
     marginTop: 10,
-    paddingHorizontal: 40,
   },
   actionButton: {
-    width: '45%',
+    flex: 1,
+    margin: 5,
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
+    backgroundColor: '#e8f5f4',
+    borderColor: '#2eada6',
+    borderWidth: 1,
   },
   actionText: {
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
+    color: '#2eada6',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  noInstructorsText: {
+    textAlign: 'center',
+    color: '#666',
+    fontSize: 14,
+    marginTop: 16,
+  },
+  instructorItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  instructorInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  instructorName: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#2eada6',
+    marginLeft: 10,
   },
 });
 

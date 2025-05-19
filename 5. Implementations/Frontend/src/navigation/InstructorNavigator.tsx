@@ -12,6 +12,7 @@ import { useAuth } from '../context/AuthContext';
 import InstructorDashboard from '../screens/InstructorScreen';
 import { InstructorDrawerParamList } from './types';
 import * as ImagePicker from 'expo-image-picker';
+import MyDevicesDrawer from '../components/instructor/MyDevicesDrawer';
 
 const Drawer = createDrawerNavigator<InstructorDrawerParamList>();
 
@@ -58,6 +59,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
+  const [showDevicesModal, setShowDevicesModal] = useState(false);
 
   useEffect(() => {
     loadProfileImage();
@@ -274,17 +276,26 @@ const CustomDrawerContent = ({ navigation }: any) => {
       </View>
 
       <View style={styles.menuItems}>
+        {/* My Devices */}
+        <TouchableOpacity
+          style={styles.drawerItem}
+          onPress={() => setShowDevicesModal(true)}
+        >
+          <Ionicons name="phone-portrait-outline" size={24} color="#2eada6" />
+          <Text style={styles.drawerItemText}>My Devices</Text>
+        </TouchableOpacity>
+        
         {/* Notifications */}
-      <TouchableOpacity
+        <TouchableOpacity
           style={styles.drawerItem}
           onPress={() => setShowNotificationsModal(true)}
-      >
+        >
           <Ionicons name="notifications-outline" size={24} color="#2eada6" />
           <Text style={styles.drawerItemText}>Notifications</Text>
           {getUnreadCount() > 0 && (
             <View style={styles.notificationBadge}>
               <Text style={styles.badgeText}>{getUnreadCount()}</Text>
-        </View>
+            </View>
           )}
         </TouchableOpacity>
 
@@ -295,25 +306,25 @@ const CustomDrawerContent = ({ navigation }: any) => {
         >
           <Ionicons name="lock-closed-outline" size={24} color="#2eada6" />
           <Text style={styles.drawerItemText}>Change Password</Text>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
         {/* About App */}
-      <TouchableOpacity
-        style={styles.drawerItem}
+        <TouchableOpacity
+          style={styles.drawerItem}
           onPress={() => setShowAboutModal(true)}
-      >
-        <Ionicons name="information-circle-outline" size={24} color="#2eada6" />
-        <Text style={styles.drawerItemText}>About App</Text>
-      </TouchableOpacity>
+        >
+          <Ionicons name="information-circle-outline" size={24} color="#2eada6" />
+          <Text style={styles.drawerItemText}>About App</Text>
+        </TouchableOpacity>
 
         {/* Logout Button */}
-      <TouchableOpacity
+        <TouchableOpacity
           style={[styles.drawerItem, { borderTopWidth: 1, borderTopColor: '#f0f0f0', marginTop: 0 }]}
-        onPress={handleLogoutPress}
-      >
-        <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
+          onPress={handleLogoutPress}
+        >
+          <Ionicons name="log-out-outline" size={24} color="#ff6b6b" />
           <Text style={[styles.drawerItemText, styles.logoutText]}>Log out</Text>
-      </TouchableOpacity>
+        </TouchableOpacity>
       </View>
 
       <ConfirmationModal
@@ -345,6 +356,11 @@ const CustomDrawerContent = ({ navigation }: any) => {
         onClose={() => setShowNotificationsModal(false)}
         notifications={notifications}
         onMarkAsRead={markAsRead}
+      />
+
+      <MyDevicesDrawer
+        visible={showDevicesModal}
+        onClose={() => setShowDevicesModal(false)}
       />
 
       {showNotification && (

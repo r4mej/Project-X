@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import attendanceRoutes from './routes/attendanceRoutes';
 import authRoutes from './routes/authRoutes';
 import classRoutes from './routes/classRoutes';
+import instructorDeviceRoutes from './routes/instructorDeviceRoutes';
 import logRoutes from './routes/logRoutes';
 import reportRoutes from './routes/reportRoutes';
 import studentRoutes from './routes/studentRoutes';
@@ -39,6 +40,7 @@ app.use('/api/classes', classRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/instructor-devices', instructorDeviceRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/test')

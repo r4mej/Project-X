@@ -5,7 +5,7 @@ import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, Modal, TextInput, ActivityIndicator } from 'react-native';
 import ClassScheduleCalendar from '../components/ClassScheduleCalendar';
 import Reports from '../components/instructor/AttendanceReports';
 import ClassManager, { Class } from '../components/instructor/ClassManager';
@@ -14,7 +14,7 @@ import SubjectSelectionDrawer from '../components/instructor/SubjectSelectionDra
 import { useAuth } from '../context/AuthContext';
 import { useRefresh } from '../context/RefreshContext';
 import { InstructorBottomTabParamList, InstructorDrawerParamList, RootStackParamList } from '../navigation/types';
-import { classAPI, reportAPI } from '../services/api';
+import { classAPI, reportAPI, instructorDeviceAPI } from '../services/api';
 
 type NavigationProp = DrawerNavigationProp<InstructorDrawerParamList>;
 const Tab = createBottomTabNavigator<InstructorBottomTabParamList>();
@@ -61,8 +61,11 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [todayClasses, setTodayClasses] = useState<Class[]>([]);
   const [showSubjectsModal, setShowSubjectsModal] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<'attendance' | 'view'>('attendance');
+  const [drawerMode, setDrawerMode] = useState<'attendance' | 'view' | 'students'>('attendance');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showDeviceModal, setShowDeviceModal] = useState(false);
+  const [deviceName, setDeviceName] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [classOverview, setClassOverview] = useState({
     totalClasses: 0,
@@ -211,12 +214,22 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     }
   };
 
-  const handleQuickAction = (action: 'attendance' | 'students' | 'schedule') => {
-    if (action === 'schedule') {
-      setShowScheduleModal(true);
-    } else {
-      setDrawerMode(action === 'attendance' ? 'attendance' : 'view');
-      setShowSubjectsModal(true);
+  const handleQuickAction = (action: 'attendance' | 'students' | 'schedule' | 'device') => {
+    switch (action) {
+      case 'attendance':
+        setShowSubjectsModal(true);
+        setDrawerMode('attendance');
+        break;
+      case 'students':
+        setShowSubjectsModal(true);
+        setDrawerMode('students');
+        break;
+      case 'schedule':
+        setShowScheduleModal(true);
+        break;
+      case 'device':
+        setShowDeviceModal(true);
+        break;
     }
   };
 
@@ -233,6 +246,28 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
       });
     }
     setShowSubjectsModal(false);
+  };
+
+  const registerDevice = async () => {
+    if (!deviceName.trim()) {
+      Alert.alert('Error', 'Please enter a device name');
+      return;
+    }
+
+    try {
+      setIsRegistering(true);
+      // Generate a unique device ID
+      const deviceId = `${Platform.OS}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      await instructorDeviceAPI.registerDevice(deviceId, deviceName);
+      Alert.alert('Success', 'Device registered successfully');
+      setShowDeviceModal(false);
+      setDeviceName('');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to register device');
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   return (
@@ -363,29 +398,34 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
           <Text style={styles.cardTitle}>Quick Actions</Text>
           <Text style={styles.subTitle}>Access frequently used features</Text>
           <View style={styles.actionButtonsRow}>
-            
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
+              style={styles.actionButton}
               onPress={() => handleQuickAction('schedule')}
             >
               <Ionicons name="calendar" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Schedule</Text>
+              <Text style={styles.actionText}>Schedule</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
+              style={styles.actionButton}
               onPress={() => handleQuickAction('students')}
             >
               <Ionicons name="people" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Students</Text>
+              <Text style={styles.actionText}>Students</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
+              style={styles.actionButton}
               onPress={() => handleQuickAction('attendance')}
             >
               <Ionicons name="qr-code" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Attendance</Text>
+              <Text style={styles.actionText}>Attendance</Text>
             </TouchableOpacity>
-            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => handleQuickAction('device')}
+            >
+              <Ionicons name="phone-portrait" size={22} color="#2eada6" />
+              <Text style={styles.actionText}>Add Device</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -419,6 +459,49 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
           yearSection={selectedClass.yearSection}
         />
       )}
+
+      {/* Device Registration Modal */}
+      <Modal
+        visible={showDeviceModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDeviceModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Register Device</Text>
+              <TouchableOpacity onPress={() => setShowDeviceModal(false)}>
+                <Ionicons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Register this device to enable location tracking for students
+            </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Device Name (e.g. My iPhone)"
+              value={deviceName}
+              onChangeText={setDeviceName}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity 
+              style={[
+                styles.registerButton, 
+                { opacity: isRegistering ? 0.7 : 1 }
+              ]}
+              onPress={registerDevice}
+              disabled={isRegistering}
+            >
+              {isRegistering ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.registerButtonText}>Register Device</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -830,29 +913,27 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
     marginTop: 10,
+    flexWrap: 'wrap',
   },
   actionButton: {
-    width: '30%',
+    width: '22%',
+    margin: 5,
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 3,
+    backgroundColor: '#e8f5f4',
+    borderColor: '#2eada6',
+    borderWidth: 1,
   },
   actionText: {
     fontSize: 12,
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
+    color: '#2eada6',
   },
   noClassesContainer: {
     alignItems: 'center',
@@ -918,66 +999,50 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    padding: 20,
   },
-  bottomDrawerContent: {
+  modalContent: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    maxHeight: '80%',
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginVertical: 12,
+    borderRadius: 10,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
   },
   modalHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2eada6',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  subjectList: {
-    paddingBottom: 20,
-  },
-  subjectItem: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 15,
   },
-  subjectName: {
-    fontSize: 16,
+  modalTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 4,
   },
-  subjectCode: {
+  modalSubtitle: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 20,
   },
-  closeButton: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    padding: 8,
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 20,
+  },
+  registerButton: {
+    backgroundColor: '#2eada6',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  registerButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
 });
 

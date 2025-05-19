@@ -679,4 +679,70 @@ export const reportAPI = {
   }
 };
 
+// Instructor Device API
+export const instructorDeviceAPI = {
+  // Register a new device
+  async registerDevice(deviceId: string, deviceName: string) {
+    try {
+      const response = await api.post('/instructor-devices/register', { 
+        deviceId, 
+        deviceName 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error registering device:', error);
+      throw error;
+    }
+  },
+
+  // Update device location
+  async updateLocation(deviceId: string, latitude: number, longitude: number, accuracy: number) {
+    try {
+      const response = await api.put('/instructor-devices/location', { 
+        deviceId, 
+        latitude, 
+        longitude, 
+        accuracy 
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating location:', error);
+      throw error;
+    }
+  },
+
+  // Get all devices for logged in instructor
+  async getDevices() {
+    try {
+      const response = await api.get('/instructor-devices/devices');
+      return response.data;
+    } catch (error) {
+      console.error('Error getting devices:', error);
+      throw error;
+    }
+  },
+
+  // Remove a device
+  async removeDevice(deviceId: string) {
+    try {
+      const response = await api.delete(`/instructor-devices/device/${deviceId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error removing device:', error);
+      throw error;
+    }
+  },
+
+  // Get instructor location (for students)
+  async getInstructorLocation(instructorId: string) {
+    try {
+      const response = await api.get(`/instructor-devices/location/${instructorId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error getting instructor location:', error);
+      throw error;
+    }
+  }
+};
+
 export default api; 

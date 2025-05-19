@@ -27,7 +27,7 @@ interface SubjectSelectionDrawerProps {
   onClose: () => void;
   classes: Class[];
   onSelectClass: (classItem: Class) => void;
-  mode: 'attendance' | 'view';
+  mode: 'attendance' | 'view' | 'students';
 }
 
 const SubjectSelectionDrawer: React.FC<SubjectSelectionDrawerProps> = ({
@@ -38,13 +38,27 @@ const SubjectSelectionDrawer: React.FC<SubjectSelectionDrawerProps> = ({
   mode
 }) => {
   const getTitle = () => {
-    return mode === 'attendance' ? 'Take Attendance' : 'View Students';
+    switch(mode) {
+      case 'attendance':
+        return 'Take Attendance';
+      case 'students':
+        return 'View Students';
+      case 'view':
+      default:
+        return 'View Class';
+    }
   };
 
   const getSubtitle = () => {
-    return mode === 'attendance' 
-      ? 'Select a subject to generate QR code'
-      : 'Select a subject to view students';
+    switch(mode) {
+      case 'attendance':
+        return 'Select a subject to generate QR code';
+      case 'students':
+        return 'Select a subject to view students';
+      case 'view':
+      default:
+        return 'Select a subject to view details';
+    }
   };
 
   return (
@@ -84,7 +98,7 @@ const SubjectSelectionDrawer: React.FC<SubjectSelectionDrawerProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.subjectItem,
-                    mode === 'attendance' ? styles.attendanceItem : styles.viewItem
+                    mode === 'attendance' ? styles.attendanceItem : mode === 'view' ? styles.viewItem : styles.studentsItem
                   ]}
                   onPress={() => onSelectClass(item)}
                 >
@@ -173,6 +187,9 @@ const styles = StyleSheet.create({
   },
   viewItem: {
     backgroundColor: '#f0e8f5',
+  },
+  studentsItem: {
+    backgroundColor: '#f5e8e8',
   },
   subjectName: {
     fontSize: 16,
