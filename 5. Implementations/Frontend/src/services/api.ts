@@ -721,6 +721,17 @@ export const instructorDeviceAPI = {
       throw error;
     }
   },
+  
+  // Admin only: Get all devices for a specific instructor
+  async getDevicesForInstructor(instructorId: string) {
+    try {
+      const response = await api.get(`/instructor-devices/admin/instructor/${instructorId}`);
+      return response;
+    } catch (error) {
+      console.error(`Error getting devices for instructor ${instructorId}:`, error);
+      throw error;
+    }
+  },
 
   // Remove a device
   async removeDevice(deviceId: string) {

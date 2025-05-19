@@ -171,4 +171,31 @@ export const getInstructorLocation = async (req: Request, res: Response) => {
     console.error('Error getting instructor location:', error);
     res.status(500).json({ message: 'Failed to retrieve instructor location.', error });
   }
+};
+
+// Admin only: Get devices for a specific instructor
+export const getDevicesForInstructor = async (req: Request, res: Response) => {
+  try {
+    // Check if the user making the request is an admin
+    const requestingUser = req.user;
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+
+    const { instructorId } = req.params;
+
+    // Verify the instructor exists
+    const instructor = await User.findOne({ userId: instructorId, role: 'instructor' });
+    if (!instructor) {
+      return res.status(404).json({ message: 'Instructor not found.' });
+    }
+
+    // Get all devices for this instructor
+    const devices = await InstructorDevice.find({ instructorId });
+    
+    res.status(200).json(devices);
+  } catch (error) {
+    console.error('Error getting instructor devices:', error);
+    res.status(500).json({ message: 'Failed to get instructor devices.', error });
+  }
 }; 

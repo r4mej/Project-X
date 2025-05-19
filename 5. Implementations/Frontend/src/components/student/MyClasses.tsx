@@ -113,7 +113,7 @@ const MyClasses: React.FC = () => {
         studentId: student.studentId,
         userId: student.studentId, // Using studentId as userId since that's what we have
         firstName: student.firstName,
-        lastName: student.surname, // Map surname to lastName
+        lastName: student.lastName, // Map lastName to lastName
         email: student.studentId + '@example.com' // Creating a placeholder email since it's required
       }));
       setStudents(mappedStudents);

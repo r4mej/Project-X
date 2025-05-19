@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator, Modal } from 'react-native';
 import RecordsOverview from '../components/admin/RecordsOverview';
 import ManageUser from '../components/admin/UserManager';
 import QuickViewClasses from '../components/instructor/QuickViewClasses';
@@ -12,7 +12,7 @@ import QuickViewUsers from '../components/instructor/QuickViewUsers';
 import { useAuth } from '../context/AuthContext';
 import { useRefresh } from '../context/RefreshContext';
 import { AdminBottomTabParamList, AdminDrawerParamList, UserRole } from '../navigation/types';
-import { classAPI, logAPI, userAPI } from '../services/api';
+import { classAPI, logAPI, userAPI, instructorDeviceAPI } from '../services/api';
 
 type NavigationProp = DrawerNavigationProp<AdminDrawerParamList>;
 const Tab = createBottomTabNavigator<AdminBottomTabParamList>();
@@ -75,6 +75,167 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
   );
 };
 
+const ViewDevicesModal: React.FC<{ visible: boolean; onClose: () => void }> = ({ visible, onClose }) => {
+  const [devices, setDevices] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [instructors, setInstructors] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (visible) {
+      fetchDevices();
+    }
+  }, [visible]);
+
+  const fetchDevices = async () => {
+    try {
+      setLoading(true);
+      // First fetch all users who are instructors
+      const users = await userAPI.getUsers();
+      const instructorUsers = users.filter((user: User) => user.role === 'instructor');
+      setInstructors(instructorUsers);
+
+      // Then fetch all devices for all instructors
+      const allDevices = [];
+      for (const instructor of instructorUsers) {
+        try {
+          // We'll use the admin's access to fetch devices for each instructor
+          const response = await instructorDeviceAPI.getDevicesForInstructor(instructor.userId);
+          if (response && response.data) {
+            const instructorDevices = response.data.map((device: any) => ({
+              ...device,
+              instructorName: instructor.username,
+              instructorId: instructor.userId
+            }));
+            allDevices.push(...instructorDevices);
+          }
+        } catch (err) {
+          console.log(`Could not fetch devices for instructor ${instructor.username}`);
+        }
+      }
+      setDevices(allDevices);
+    } catch (error) {
+      console.error('Error fetching devices:', error);
+      Alert.alert('Error', 'Failed to fetch instructor devices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString: Date) => {
+    if (!dateString) return 'Never';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getDeviceCount = () => {
+    return devices.length;
+  };
+
+  const getActiveDeviceCount = () => {
+    return devices.filter(device => device.active).length;
+  };
+  
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>All Instructor Devices</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#2eada6" />
+              <Text style={styles.loadingText}>Loading devices...</Text>
+            </View>
+          ) : devices.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="phone-portrait-outline" size={48} color="#999" />
+              <Text style={styles.emptyText}>No instructor devices found</Text>
+              <Text style={styles.emptySubtext}>Instructors haven't registered any devices yet</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.deviceSummary}>
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryCount}>{getDeviceCount()}</Text>
+                  <Text style={styles.summaryLabel}>Total Devices</Text>
+                </View>
+                <View style={styles.summaryDivider} />
+                <View style={styles.summaryItem}>
+                  <Text style={styles.summaryCount}>{getActiveDeviceCount()}</Text>
+                  <Text style={styles.summaryLabel}>Active Devices</Text>
+                </View>
+              </View>
+              
+              <ScrollView style={{maxHeight: '80%'}}>
+                {instructors.map(instructor => {
+                  const instructorDevices = devices.filter(d => d.instructorId === instructor.userId);
+                  if (instructorDevices.length === 0) return null;
+                  
+                  return (
+                    <View key={instructor.userId} style={styles.instructorSection}>
+                      <View style={styles.instructorHeader}>
+                        <Ionicons name="person" size={18} color="#2eada6" />
+                        <Text style={styles.instructorName}>{instructor.username}</Text>
+                        <Text style={styles.instructorRole}>Instructor</Text>
+                        <View style={{flex: 1}} />
+                        <View style={styles.deviceCountBadge}>
+                          <Text style={styles.deviceCountText}>{instructorDevices.length}</Text>
+                        </View>
+                      </View>
+                      
+                      {instructorDevices.map(device => (
+                        <View key={device._id} style={styles.deviceCard}>
+                          <View style={styles.deviceHeader}>
+                            <Text style={styles.deviceName}>{device.deviceName}</Text>
+                            <View style={[
+                              styles.statusDot, 
+                              {backgroundColor: device.active ? '#4CAF50' : '#999'}
+                            ]} />
+                          </View>
+                          <Text style={styles.deviceId}>ID: {device.deviceId.substring(0, 12)}...</Text>
+                          <Text style={styles.deviceDetail}>
+                            Registered: {formatDate(device.createdAt)}
+                          </Text>
+                          {device.lastLocation && device.lastLocation.timestamp ? (
+                            <View style={styles.locationInfo}>
+                              <Ionicons name="location" size={14} color="#2eada6" />
+                              <Text style={styles.locationText}>
+                                Last location: {formatDate(device.lastLocation.timestamp)}
+                              </Text>
+                            </View>
+                          ) : (
+                            <Text style={styles.noLocationText}>No location data available</Text>
+                          )}
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const AdminDashboard: React.FC = () => {
   const navigation = useNavigation<DrawerNavigationProp<AdminDrawerParamList>>();
   const { refreshKey, triggerRefresh } = useRefresh();
@@ -96,6 +257,7 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showUserList, setShowUserList] = useState(false);
   const [showClassList, setShowClassList] = useState(false);
+  const [showDeviceList, setShowDeviceList] = useState(false);
 
   const fetchUsers = async () => {
     try {
@@ -280,28 +442,42 @@ const AdminDashboard: React.FC = () => {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Quick Actions</Text>
           <Text style={styles.subTitle}>Access frequently used features</Text>
-          <View style={styles.actionButtonsRow}>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
-              onPress={() => setShowUserList(true)}
-            >
-              <Ionicons name="people" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>User List</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
-              onPress={() => setShowClassList(true)}
-            >
-              <Ionicons name="school" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Class List</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.actionButton, { backgroundColor: '#e8f5f4', borderColor: '#2eada6', borderWidth: 1 }]}
-              onPress={() => navigation.navigate('ViewLogs')}
-            >
-              <Ionicons name="list" size={22} color="#2eada6" />
-              <Text style={[styles.actionText, { color: '#2eada6' }]}>Logs</Text>
-            </TouchableOpacity>
+          <View style={styles.actionButtonsContainer}>
+            <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => setShowUserList(true)}
+              >
+                <Ionicons name="people" size={22} color="#2eada6" />
+                <Text style={[styles.actionText, { color: '#2eada6' }]}>User List</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => setShowClassList(true)}
+              >
+                <Ionicons name="school" size={22} color="#2eada6" />
+                <Text style={[styles.actionText, { color: '#2eada6' }]}>Class List</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => navigation.navigate('ViewLogs')}
+              >
+                <Ionicons name="list" size={22} color="#2eada6" />
+                <Text style={[styles.actionText, { color: '#2eada6' }]}>Logs</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#f0e8f5', borderColor: '#8a2be2' }]}
+                onPress={() => setShowDeviceList(true)}
+              >
+                <Ionicons name="phone-portrait" size={22} color="#8a2be2" />
+                <Text style={[styles.actionText, { color: '#8a2be2' }]}>View Devices</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </View>
@@ -314,6 +490,10 @@ const AdminDashboard: React.FC = () => {
       <QuickViewClasses
         visible={showClassList}
         onClose={() => setShowClassList(false)}
+      />
+      <ViewDevicesModal
+        visible={showDeviceList} 
+        onClose={() => setShowDeviceList(false)}
       />
     </ScrollView>
   );
@@ -645,17 +825,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  actionButtonsRow: {
+  actionButtonsContainer: {
+    flexDirection: 'column',
+    marginTop: 15,
+    gap: 15,
+  },
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 10,
   },
   actionButton: {
-    width: '30%',
+    width: '48%',
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
+    backgroundColor: '#e8f5f4',
+    borderColor: '#2eada6',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -761,6 +947,165 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2eada6',
     marginTop: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    width: '90%',
+    maxHeight: '80%',
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2eada6',
+  },
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  emptySubtext: {
+    marginTop: 5,
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+  },
+  instructorSection: {
+    marginBottom: 20,
+  },
+  instructorName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2eada6',
+    marginBottom: 10,
+  },
+  deviceCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#2eada6',
+  },
+  deviceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  deviceName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  deviceId: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 5,
+  },
+  deviceDetail: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 5,
+  },
+  locationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#2eada6',
+    marginLeft: 5,
+  },
+  noLocationText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#999',
+    marginTop: 5,
+  },
+  deviceSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    marginBottom: 15,
+  },
+  summaryItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+  },
+  summaryCount: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2eada6',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#666',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#e0e0e0',
+  },
+  instructorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    backgroundColor: '#f5f5f5',
+    padding: 8,
+    borderRadius: 8,
+  },
+  deviceCountBadge: {
+    backgroundColor: '#2eada6',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  deviceCountText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+  },
+  instructorRole: {
+    fontSize: 12,
+    color: '#666',
   },
 });
 

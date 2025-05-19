@@ -4,7 +4,8 @@ import {
   updateLocation,
   getInstructorDevices,
   removeDevice,
-  getInstructorLocation
+  getInstructorLocation,
+  getDevicesForInstructor
 } from '../controllers/instructorDeviceController';
 import { protect } from '../middleware/authMiddleware';
 
@@ -21,5 +22,8 @@ router.delete('/device/:deviceId', removeDevice);
 
 // Student accessible route to get instructor location
 router.get('/location/:instructorId', getInstructorLocation);
+
+// Admin only route to get devices for a specific instructor
+router.get('/admin/instructor/:instructorId', getDevicesForInstructor);
 
 export default router; 
