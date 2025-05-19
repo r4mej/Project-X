@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Dimensions, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import RecordsOverview from '../components/admin/RecordsOverview';
 import ManageUser from '../components/admin/UserManager';
 import QuickViewClasses from '../components/instructor/QuickViewClasses';
@@ -77,7 +77,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
 
 const AdminDashboard: React.FC = () => {
   const navigation = useNavigation<DrawerNavigationProp<AdminDrawerParamList>>();
-  const { refreshKey } = useRefresh();
+  const { refreshKey, triggerRefresh } = useRefresh();
   const [users, setUsers] = useState<User[]>([]);
   const [systemStats, setSystemStats] = useState<SystemStats>({
     totalUsers: 0,
@@ -150,8 +150,28 @@ const AdminDashboard: React.FC = () => {
     return () => clearInterval(interval);
   }, [refreshKey]);
 
+  // Add a dedicated effect for handling just refreshKey changes
+  useEffect(() => {
+    if (refreshKey > 0) {
+      console.log('Refreshing admin data due to refreshKey change:', refreshKey);
+      // Small delay to ensure backend has processed any new data
+      setTimeout(() => {
+        fetchUsers();
+      }, 500);
+    }
+  }, [refreshKey]);
+
   const studentPercentage = Math.round((systemStats.studentCount / systemStats.totalUsers) * 100) || 0;
   const instructorPercentage = Math.round((systemStats.instructorCount / systemStats.totalUsers) * 100) || 0;
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2eada6" />
+        <Text style={styles.loadingText}>Loading dashboard data...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -312,9 +332,12 @@ const AdminScreen: React.FC = () => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const [activeTab, setActiveTab] = useState('Dashboard');
   const { user, login } = useAuth();
+  const { triggerRefresh } = useRefresh();
+  const [loading, setLoading] = useState(true);
   
   useEffect(() => {
     checkStoredCredentials();
+    setLoading(false);
   }, []);
 
   const checkStoredCredentials = async () => {
@@ -367,7 +390,13 @@ const AdminScreen: React.FC = () => {
     }
   };
 
-  const { triggerRefresh } = useRefresh();
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2eada6" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -721,6 +750,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     textAlign: 'center',
     width: '100%',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2eada6',
+    marginTop: 20,
   },
 });
 

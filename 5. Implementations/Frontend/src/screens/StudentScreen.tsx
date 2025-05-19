@@ -133,12 +133,12 @@ const StudentDashboard: React.FC = () => {
     }
   }, [refreshKey]);
 
-  // Add a new useEffect to fetch instructors
+  // Add a new useEffect to fetch instructors and use refreshKey
   useEffect(() => {
     if (user?.userId) {
       fetchInstructors();
     }
-  }, [user]);
+  }, [user, refreshKey]);
 
   const fetchInstructors = async () => {
     try {
@@ -178,7 +178,26 @@ const StudentDashboard: React.FC = () => {
       
       // Extract unique instructors from classes (with more comprehensive field checking)
       const instructors = new Map();
-      classesData.forEach((classItem: any) => {
+      
+      // First try classes assigned to the student
+      const enrolledClasses = await Promise.all(
+        classesData.map(async (classItem: any) => {
+          try {
+            const students = await studentAPI.getStudentsByClass(classItem._id);
+            const isEnrolled = students.some(student => student.studentId === user!.userId);
+            return isEnrolled ? classItem : null;
+          } catch (error) {
+            console.log(`Error checking enrollment for class ${classItem._id}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      // Filter out null values and process enrolled classes first
+      const validEnrolledClasses = enrolledClasses.filter(c => c !== null);
+      
+      // Process enrolled classes first (higher priority)
+      validEnrolledClasses.forEach((classItem: any) => {
         // Check for direct instructor fields
         if (classItem.instructorId && classItem.instructorName) {
           instructors.set(classItem.instructorId, {
@@ -211,6 +230,43 @@ const StudentDashboard: React.FC = () => {
           }
         }
       });
+      
+      // If we didn't find any instructors from enrolled classes, process all classes
+      if (instructors.size === 0) {
+        classesData.forEach((classItem: any) => {
+          // Check for direct instructor fields
+          if (classItem.instructorId && classItem.instructorName) {
+            instructors.set(classItem.instructorId, {
+              userId: classItem.instructorId,
+              username: classItem.instructorName
+            });
+          } 
+          // Check for instructor field
+          else if (classItem.instructor) {
+            // If instructor is a string, use it as the name
+            if (typeof classItem.instructor === 'string') {
+              // Generate a userId from the name if needed
+              const instructorId = `instructor_${classItem.instructor.replace(/\s+/g, '_').toLowerCase()}`;
+              instructors.set(instructorId, {
+                userId: instructorId,
+                username: classItem.instructor
+              });
+            }
+            // If instructor is an object, extract id and name
+            else if (typeof classItem.instructor === 'object' && classItem.instructor !== null) {
+              const id = classItem.instructor._id || classItem.instructor.userId || classItem.instructor.id;
+              const name = classItem.instructor.name || classItem.instructor.username;
+              
+              if (id && name) {
+                instructors.set(id, {
+                  userId: id,
+                  username: name
+                });
+              }
+            }
+          }
+        });
+      }
       
       // Convert Map to array
       const extractedInstructors = Array.from(instructors.values());
@@ -832,21 +888,35 @@ const StudentDashboard: React.FC = () => {
             ) : instructorList.length === 0 ? (
               <Text style={styles.noInstructorsText}>No instructors available</Text>
             ) : (
-              instructorList.map((instructor) => (
-                <TouchableOpacity
-                  key={instructor.userId}
-                  style={styles.instructorItem}
-                  onPress={() => {
-                    trackInstructor(instructor);
-                  }}
-                >
-                  <View style={styles.instructorInfo}>
-                    <Ionicons name="person" size={24} color="#2eada6" />
-                    <Text style={styles.instructorName}>{instructor.username}</Text>
+              <>
+                <Text style={styles.modalSubtitle}>
+                  Select an instructor to view their current location
+                </Text>
+                {instructorLocation && (
+                  <View style={styles.lastTrackingInfo}>
+                    <Text style={styles.lastTrackingText}>
+                      Last tracked: {selectedInstructor?.username} - {
+                        new Date(instructorLocation.timestamp).toLocaleTimeString()
+                      }
+                    </Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={20} color="#666" />
-                </TouchableOpacity>
-              ))
+                )}
+                {instructorList.map((instructor) => (
+                  <TouchableOpacity
+                    key={instructor.userId}
+                    style={styles.instructorItem}
+                    onPress={() => {
+                      trackInstructor(instructor);
+                    }}
+                  >
+                    <View style={styles.instructorInfo}>
+                      <Ionicons name="person" size={24} color="#2eada6" />
+                      <Text style={styles.instructorName}>{instructor.username}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#666" />
+                  </TouchableOpacity>
+                ))}
+              </>
             )}
           </View>
         </View>
@@ -1401,6 +1471,25 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2eada6',
     marginLeft: 10,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 15,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+  },
+  lastTrackingInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  lastTrackingText: {
+    fontSize: 13,
+    color: '#2eada6',
+    textAlign: 'center',
   },
 });
 

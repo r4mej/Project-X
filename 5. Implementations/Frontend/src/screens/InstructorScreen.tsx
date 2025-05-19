@@ -56,7 +56,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
 
 const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: string; present: number; absent: number; }[] }> = ({ classes, attendanceData }) => {
   const { user } = useAuth();
-  const { refreshKey } = useRefresh();
+  const { refreshKey, triggerRefresh } = useRefresh();
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [todayClasses, setTodayClasses] = useState<Class[]>([]);
@@ -66,6 +66,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   const [showDeviceModal, setShowDeviceModal] = useState(false);
   const [deviceName, setDeviceName] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [classOverview, setClassOverview] = useState({
     totalClasses: 0,
@@ -77,9 +78,25 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
   useEffect(() => {
-    filterTodayClasses();
-    calculateClassOverview();
-  }, [classes, refreshKey]);
+    if (user?.userId) {
+      console.log('Fetching instructor data due to user or refresh change');
+      setIsLoading(true);
+      filterTodayClasses();
+      calculateClassOverview().finally(() => setIsLoading(false));
+    }
+  }, [classes, refreshKey, user]);
+  
+  // Add a dedicated effect for handling just refreshKey changes
+  // This ensures data is refreshed even when user is already loaded
+  useEffect(() => {
+    if (user?.userId && refreshKey > 0) {
+      console.log('Refreshing instructor data due to refreshKey change:', refreshKey);
+      // Small delay to ensure backend has processed any new data
+      setTimeout(() => {
+        calculateClassOverview();
+      }, 500);
+    }
+  }, [refreshKey]);
 
   const getDayAbbreviation = (fullDay: string): string => {
     switch (fullDay.toUpperCase()) {
@@ -201,6 +218,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
         averageAttendance,
         ongoingClasses
       });
+      return true; // Return a value to indicate completion
     } catch (error) {
       console.error('Error calculating class overview:', error);
       // Set default values if there's an error
@@ -211,6 +229,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
         averageAttendance: 0,
         ongoingClasses: 0
       });
+      return false; // Return a value to indicate completion with error
     }
   };
 
@@ -269,6 +288,15 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
       setIsRegistering(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2eada6" />
+        <Text style={styles.loadingText}>Loading instructor data...</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container}>
@@ -509,7 +537,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
 const InstructorScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [activeTab, setActiveTab] = useState('InstructorDashboard');
   const { user, login } = useAuth();
   const { refreshKey, triggerRefresh } = useRefresh();
   const [classes, setClasses] = useState<Class[]>([]);
@@ -589,6 +617,14 @@ const InstructorScreen: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2eada6" />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.headerContainer}>
@@ -603,7 +639,7 @@ const InstructorScreen: React.FC = () => {
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={() => {
-              refreshKey && triggerRefresh();
+              triggerRefresh();
               Alert.alert("Refreshing", "Updating class data...");
             }}
           >
@@ -1043,6 +1079,18 @@ const styles = StyleSheet.create({
   registerButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 

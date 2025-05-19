@@ -123,15 +123,31 @@ export const getInstructorLocation = async (req: Request, res: Response) => {
   try {
     const { instructorId } = req.params;
 
-    // Verify the instructor exists
-    const instructor = await User.findOne({ userId: instructorId, role: 'instructor' });
+    // First, verify the instructor exists as a user
+    let instructor = await User.findOne({ userId: instructorId, role: 'instructor' });
+    
+    // If not found by userId, try other possible identifier fields
+    if (!instructor) {
+      instructor = await User.findOne({ 
+        $or: [
+          { _id: instructorId },
+          { username: instructorId }
+        ],
+        role: 'instructor'
+      });
+    }
+    
+    // If still not found, respond with error
     if (!instructor) {
       return res.status(404).json({ message: 'Instructor not found.' });
     }
+    
+    // Use the instructor's userId for device lookup
+    const instructorUserId = instructor.userId;
 
     // Find the instructor's active device with the most recent location
     const devices = await InstructorDevice.find({ 
-      instructorId, 
+      instructorId: instructorUserId, 
       active: true,
       'lastLocation.latitude': { $ne: null },
       'lastLocation.longitude': { $ne: null }
@@ -141,12 +157,13 @@ export const getInstructorLocation = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'No location data available for this instructor.' });
     }
 
-    // Only return the location data, not the full device details
+    // Include instructor name in the response for better UI display
     const location = {
       latitude: devices[0].lastLocation.latitude,
       longitude: devices[0].lastLocation.longitude,
       accuracy: devices[0].lastLocation.accuracy,
-      timestamp: devices[0].lastLocation.timestamp
+      timestamp: devices[0].lastLocation.timestamp,
+      instructorName: instructor.username
     };
 
     res.status(200).json(location);

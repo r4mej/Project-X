@@ -738,9 +738,16 @@ export const instructorDeviceAPI = {
     try {
       const response = await api.get(`/instructor-devices/location/${instructorId}`);
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting instructor location:', error);
-      throw error;
+      // Add more descriptive error handling
+      if (error.response?.status === 404) {
+        throw new Error('No active devices found for this instructor');
+      } else if (error.response?.data?.message) {
+        throw error;
+      } else {
+        throw new Error('Failed to retrieve instructor location');
+      }
     }
   }
 };
