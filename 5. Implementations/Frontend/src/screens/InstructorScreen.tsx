@@ -16,6 +16,24 @@ import { useRefresh } from '../context/RefreshContext';
 import { InstructorBottomTabParamList, InstructorDrawerParamList, RootStackParamList } from '../navigation/types';
 import { classAPI, reportAPI, instructorDeviceAPI } from '../services/api';
 
+// Instructor theme colors
+const INSTRUCTOR_COLORS = {
+  primary: '#2563eb',          // Main blue
+  secondary: '#3b82f6',        // Lighter blue 
+  tertiary: '#1e40af',         // Darker blue
+  background: '#f5f9ff',       // Very light blue background
+  cardBackground: '#ffffff',   // White for cards
+  highlight: '#60a5fa',        // Highlight blue
+  text: {
+    primary: '#1e3a8a',        // Dark blue for main text
+    secondary: '#64748b',      // Gray for secondary text
+    light: '#ffffff'           // White text
+  },
+  border: '#bfdbfe',           // Light blue border
+  success: '#0ea5e9',          // Success blue
+  error: '#ef4444'             // Error red
+};
+
 type NavigationProp = DrawerNavigationProp<InstructorDrawerParamList>;
 const Tab = createBottomTabNavigator<InstructorBottomTabParamList>();
 
@@ -75,7 +93,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     averageAttendance: 0,
     ongoingClasses: 0
   });
-  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
+  const [attendanceTaken, setAttendanceTaken] = useState(false);
 
   useEffect(() => {
     if (user?.userId) {
@@ -97,6 +115,15 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
       }, 500);
     }
   }, [refreshKey]);
+
+  // Add an effect to handle the attendance taken flag
+  useEffect(() => {
+    if (attendanceTaken) {
+      // Only refresh once when attendance is marked as taken
+      triggerRefresh();
+      setAttendanceTaken(false);
+    }
+  }, [attendanceTaken]);
 
   const getDayAbbreviation = (fullDay: string): string => {
     switch (fullDay.toUpperCase()) {
@@ -289,6 +316,12 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
     }
   };
 
+  const handleQRModalClose = () => {
+    setShowQRModal(false);
+    setSelectedClass(null);
+    setAttendanceTaken(true);
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -299,66 +332,19 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: INSTRUCTOR_COLORS.background }]}>
       <View style={styles.contentContainer}>
-        {/* Class Overview Card */}
-        <View style={styles.card}>
-          <TouchableOpacity 
-            style={styles.overviewHeader}
-            onPress={() => setIsOverviewExpanded(!isOverviewExpanded)}
-          >
-            <View>
-          <Text style={styles.cardTitle}>Class Overview</Text>
-              <Text style={styles.subTitle}>Today's Statistics</Text>
-            </View>
-            <Ionicons 
-              name={isOverviewExpanded ? "chevron-up" : "chevron-down"} 
-              size={24} 
-              color="#2eada6" 
-            />
-          </TouchableOpacity>
-
-          <View style={styles.overviewStats}>
-            <View style={styles.statCircle}>
-              <Text style={styles.statPercentage}>{classOverview.averageAttendance}%</Text>
-              <Text style={styles.statLabel}>Average</Text>
-              <Text style={styles.statLabel}>Attendance</Text>
-            </View>
-          </View>
-
-          {isOverviewExpanded && (
-            <View style={styles.detailedStats}>
-              <View style={styles.statRow}>
-                <Text style={styles.statTitle}>Total Classes</Text>
-                <Text style={styles.statValue}>{classOverview.totalClasses}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statTitle}>Today's Classes</Text>
-                <Text style={styles.statValue}>{classOverview.activeClasses}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statTitle}>Ongoing Classes</Text>
-                <Text style={[styles.statValue, { color: '#4CAF50' }]}>{classOverview.ongoingClasses}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statTitle}>Total Students</Text>
-                <Text style={styles.statValue}>{classOverview.totalStudents}</Text>
-            </View>
-            </View>
-          )}
-        </View>
-
         {/* Today's Schedule Card */}
         <View style={styles.card}>
           <View style={styles.scheduleHeader}>
-            <Text style={styles.cardTitle}>Today's Schedule</Text>
-            <View style={styles.currentDayBadge}>
+            <Text style={[styles.cardTitle, { color: INSTRUCTOR_COLORS.primary }]}>Today's Schedule</Text>
+            <View style={[styles.currentDayBadge, { backgroundColor: INSTRUCTOR_COLORS.secondary }]}>
               <Text style={styles.currentDayText}>
                 {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
               </Text>
             </View>
           </View>
-          <Text style={styles.subTitle}>Your classes for today</Text>
+          <Text style={[styles.subTitle, { color: INSTRUCTOR_COLORS.text.secondary }]}>Your classes for today</Text>
           <View style={styles.classList}>
             {todayClasses.length > 0 ? (
               todayClasses.map((classItem, index) => {
@@ -372,8 +358,8 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                     key={classItem._id}
                     style={[
                       styles.classCard,
-                      { backgroundColor: isOngoing ? '#e8f5f4' : index % 2 === 0 ? '#f0e8f5' : '#fff4e6' },
-                      { borderLeftColor: isOngoing ? '#2eada6' : index % 2 === 0 ? '#8a2be2' : '#ff9f43' }
+                      { backgroundColor: isOngoing ? '#dbeafe' : index % 2 === 0 ? '#eff6ff' : '#f8fafc' },
+                      { borderLeftColor: isOngoing ? INSTRUCTOR_COLORS.primary : index % 2 === 0 ? INSTRUCTOR_COLORS.secondary : INSTRUCTOR_COLORS.tertiary }
                     ]}
                   >
                     <View style={styles.classHeader}>
@@ -381,27 +367,27 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
                         <View style={styles.subjectInfo}>
                           <Text style={[
                             styles.classCode,
-                            { color: isOngoing ? '#2eada6' : index % 2 === 0 ? '#8a2be2' : '#ff9f43' }
+                            { color: isOngoing ? INSTRUCTOR_COLORS.primary : index % 2 === 0 ? INSTRUCTOR_COLORS.secondary : INSTRUCTOR_COLORS.tertiary }
                           ]}>{classItem.subjectCode}</Text>
                           <Text style={styles.className}>{classItem.className}</Text>
                           <Text style={styles.yearSectionText}>{classItem.yearSection}</Text>
                         </View>
                       </View>
                       {isOngoing && (
-                        <View style={[styles.statusBadge, { backgroundColor: '#2eada6' }]}>
+                        <View style={[styles.statusBadge, { backgroundColor: INSTRUCTOR_COLORS.primary }]}>
                           <Text style={styles.statusText}>Ongoing</Text>
                         </View>
                       )}
                     </View>
                     <View style={styles.classDetails}>
                       <View style={styles.detailItem}>
-                        <Ionicons name="location-outline" size={16} color="#666" />
+                        <Ionicons name="location-outline" size={16} color={INSTRUCTOR_COLORS.text.secondary} />
                         <Text style={styles.detailText}>{classItem.room}</Text>
                       </View>
                       <View style={styles.scheduleTimeContainer}>
                         {classItem.schedules.map((schedule, idx) => (
                           <View key={idx} style={styles.scheduleTimeItem}>
-                            <Ionicons name="time-outline" size={16} color="#666" />
+                            <Ionicons name="time-outline" size={16} color={INSTRUCTOR_COLORS.text.secondary} />
                             <Text style={styles.scheduleTimeText}>
                               {schedule.startTime}{schedule.startPeriod} - {schedule.endTime}{schedule.endPeriod}
                             </Text>
@@ -414,7 +400,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
               })
             ) : (
               <View style={styles.noClassesContainer}>
-                <Ionicons name="calendar-outline" size={48} color="#666" />
+                <Ionicons name="calendar-outline" size={48} color={INSTRUCTOR_COLORS.text.secondary} />
                 <Text style={styles.noClassesText}>No classes scheduled for today</Text>
               </View>
             )}
@@ -423,36 +409,36 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
 
         {/* Quick Actions Card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Quick Actions</Text>
-          <Text style={styles.subTitle}>Access frequently used features</Text>
+          <Text style={[styles.cardTitle, { color: INSTRUCTOR_COLORS.primary }]}>Quick Actions</Text>
+          <Text style={[styles.subTitle, { color: INSTRUCTOR_COLORS.text.secondary }]}>Access frequently used features</Text>
           <View style={styles.actionButtonsRow}>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: '#dbeafe', borderColor: INSTRUCTOR_COLORS.primary }]}
               onPress={() => handleQuickAction('schedule')}
             >
-              <Ionicons name="calendar" size={22} color="#2eada6" />
-              <Text style={styles.actionText}>Schedule</Text>
+              <Ionicons name="calendar" size={22} color={INSTRUCTOR_COLORS.primary} />
+              <Text style={[styles.actionText, { color: INSTRUCTOR_COLORS.primary }]}>Schedule</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: '#dbeafe', borderColor: INSTRUCTOR_COLORS.primary }]}
               onPress={() => handleQuickAction('students')}
             >
-              <Ionicons name="people" size={22} color="#2eada6" />
-              <Text style={styles.actionText}>Students</Text>
+              <Ionicons name="people" size={22} color={INSTRUCTOR_COLORS.primary} />
+              <Text style={[styles.actionText, { color: INSTRUCTOR_COLORS.primary }]}>Students</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: '#dbeafe', borderColor: INSTRUCTOR_COLORS.primary }]}
               onPress={() => handleQuickAction('attendance')}
             >
-              <Ionicons name="qr-code" size={22} color="#2eada6" />
-              <Text style={styles.actionText}>Attendance</Text>
+              <Ionicons name="qr-code" size={22} color={INSTRUCTOR_COLORS.primary} />
+              <Text style={[styles.actionText, { color: INSTRUCTOR_COLORS.primary }]}>Attendance</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: '#dbeafe', borderColor: INSTRUCTOR_COLORS.primary }]}
               onPress={() => handleQuickAction('device')}
             >
-              <Ionicons name="phone-portrait" size={22} color="#2eada6" />
-              <Text style={styles.actionText}>Add Device</Text>
+              <Ionicons name="phone-portrait" size={22} color={INSTRUCTOR_COLORS.primary} />
+              <Text style={[styles.actionText, { color: INSTRUCTOR_COLORS.primary }]}>Device</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -478,10 +464,7 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
       {selectedClass && (
         <QRGenerator
           visible={showQRModal}
-          onClose={() => {
-            setShowQRModal(false);
-            setSelectedClass(null);
-          }}
+          onClose={handleQRModalClose}
           classId={selectedClass._id}
           subjectCode={selectedClass.subjectCode}
           yearSection={selectedClass.yearSection}
@@ -496,35 +479,36 @@ const InstructorDashboard: React.FC<{ classes: Class[]; attendanceData: { date: 
         onRequestClose={() => setShowDeviceModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { borderColor: INSTRUCTOR_COLORS.border, borderWidth: 1 }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Register Device</Text>
+              <Text style={[styles.modalTitle, { color: INSTRUCTOR_COLORS.text.primary }]}>Register Device</Text>
               <TouchableOpacity onPress={() => setShowDeviceModal(false)}>
-                <Ionicons name="close" size={24} color="#333" />
+                <Ionicons name="close" size={24} color={INSTRUCTOR_COLORS.text.primary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>
+            <Text style={[styles.modalSubtitle, { color: INSTRUCTOR_COLORS.text.secondary }]}>
               Register this device to enable location tracking for students
             </Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: INSTRUCTOR_COLORS.border }]}
               placeholder="Device Name (e.g. My iPhone)"
               value={deviceName}
               onChangeText={setDeviceName}
               autoCapitalize="none"
+              placeholderTextColor={INSTRUCTOR_COLORS.text.secondary}
             />
             <TouchableOpacity 
               style={[
                 styles.registerButton, 
-                { opacity: isRegistering ? 0.7 : 1 }
+                { backgroundColor: INSTRUCTOR_COLORS.primary, opacity: isRegistering ? 0.7 : 1 }
               ]}
               onPress={registerDevice}
               disabled={isRegistering}
             >
               {isRegistering ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color={INSTRUCTOR_COLORS.text.light} />
               ) : (
-                <Text style={styles.registerButtonText}>Register Device</Text>
+                <Text style={[styles.registerButtonText, { color: INSTRUCTOR_COLORS.text.light }]}>Register Device</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -626,16 +610,16 @@ const InstructorScreen: React.FC = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerContainer}>
+    <View style={[styles.container, { backgroundColor: INSTRUCTOR_COLORS.background }]}>
+      <View style={[styles.headerContainer, { backgroundColor: INSTRUCTOR_COLORS.primary }]}>
         <View style={styles.headerContent}>
           <TouchableOpacity
             style={styles.menuButton}
             onPress={() => navigation.toggleDrawer()}
           >
-            <Ionicons name="menu" size={28} color="white" />
+            <Ionicons name="menu" size={28} color={INSTRUCTOR_COLORS.text.light} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{getHeaderTitle()}</Text>
+          <Text style={[styles.headerTitle, { color: INSTRUCTOR_COLORS.text.light }]}>{getHeaderTitle()}</Text>
           <TouchableOpacity 
             style={styles.refreshButton}
             onPress={() => {
@@ -643,7 +627,7 @@ const InstructorScreen: React.FC = () => {
               Alert.alert("Refreshing", "Updating class data...");
             }}
           >
-            <Ionicons name="refresh" size={24} color="white" />
+            <Ionicons name="refresh" size={24} color={INSTRUCTOR_COLORS.text.light} />
           </TouchableOpacity>
         </View>
       </View>
@@ -653,7 +637,7 @@ const InstructorScreen: React.FC = () => {
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: '#2eada6',
+              backgroundColor: INSTRUCTOR_COLORS.primary,
               borderTopWidth: 1,
               borderTopColor: 'rgba(255, 255, 255, 0.2)',
               height: 70,
@@ -718,7 +702,7 @@ const InstructorScreen: React.FC = () => {
             left: 0,
             width: INDICATOR_WIDTH,
             height: 3,
-            backgroundColor: 'white',
+            backgroundColor: INSTRUCTOR_COLORS.text.light,
             borderRadius: 1.5,
             transform: [{ translateX: slideAnim }],
           }}
@@ -731,10 +715,10 @@ const InstructorScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: INSTRUCTOR_COLORS.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: INSTRUCTOR_COLORS.primary,
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -764,7 +748,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: INSTRUCTOR_COLORS.text.light,
     textAlign: 'center',
     flex: 1,
   },
@@ -799,7 +783,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: INSTRUCTOR_COLORS.cardBackground,
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
@@ -812,12 +796,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: INSTRUCTOR_COLORS.primary,
     marginBottom: 5,
   },
   subTitle: {
     fontSize: 14,
-    color: '#666',
+    color: INSTRUCTOR_COLORS.text.secondary,
     marginBottom: 20,
   },
   overviewHeader: {
@@ -1084,12 +1068,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: INSTRUCTOR_COLORS.background,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: INSTRUCTOR_COLORS.text.secondary,
     textAlign: 'center',
   },
 });

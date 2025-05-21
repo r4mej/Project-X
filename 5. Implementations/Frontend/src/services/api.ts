@@ -434,11 +434,24 @@ export const attendanceAPI = {
         ? navigator.userAgent 
         : `${Platform.OS} ${Platform.Version}`;
       
+      // Ensure we have a valid timestamp in ISO format
+      let timestamp = data.timestamp;
+      if (!timestamp) {
+        timestamp = new Date().toISOString();
+      } else {
+        // Validate the timestamp
+        const dateObj = new Date(timestamp);
+        if (isNaN(dateObj.getTime())) {
+          console.warn('Invalid timestamp provided, using current time instead');
+          timestamp = new Date().toISOString();
+        }
+      }
+      
       // Add device info to the request
       const requestData = {
         ...data,
         deviceInfo: data.deviceInfo || deviceInfo,
-        timestamp: data.timestamp || new Date().toISOString(),
+        timestamp,
         recordedVia: data.recordedVia || 'qr'
       };
       

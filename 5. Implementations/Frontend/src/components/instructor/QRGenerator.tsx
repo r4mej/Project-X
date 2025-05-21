@@ -3,9 +3,23 @@ import { BlurView } from 'expo-blur';
 import * as React from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { useRefresh } from '../../context/RefreshContext';
-import { Alert, Modal, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { SlideInDown, SlideOutDown } from 'react-native-reanimated';
+
+// Add TextEncoder polyfill for Android compatibility
+if (Platform.OS !== 'web') {
+  // Only add polyfill for non-web platforms (Android, iOS)
+  const TextEncodingPolyfill = require('text-encoding');
+  
+  if (typeof global.TextEncoder === 'undefined') {
+    global.TextEncoder = TextEncodingPolyfill.TextEncoder;
+  }
+  
+  if (typeof global.TextDecoder === 'undefined') {
+    global.TextDecoder = TextEncodingPolyfill.TextDecoder;
+  }
+}
 
 interface QRGeneratorProps {
   visible: boolean;
@@ -26,7 +40,11 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
   const qrRef = useRef<any>(null);
   const [qrValue, setQrValue] = useState<any>(null);
   const { triggerRefresh } = useRefresh();
+  
+  // Track if the modal was previously open
+  const previousVisibleRef = useRef<boolean>(false);
 
+  // Effect for generating the QR code when modal becomes visible
   useEffect(() => {
     if (visible) {
       // Generate QR data with class information and timestamp
@@ -46,16 +64,14 @@ const QRGenerator: React.FC<QRGeneratorProps> = ({
       const qrString = JSON.stringify(data);
       setQrData(qrString);
       setQrValue(data);
-      
-      // Trigger refresh when generating a new QR code
-      triggerRefresh();
     }
+    
+    // Track previous visibility state
+    previousVisibleRef.current = visible;
   }, [visible, classId, subjectCode, yearSection]);
 
   const handleShare = async () => {
     try {
-      // Optionally, you can generate a base64 image and share it
-      // For now, just share the code as text
       await Share.share({
         message: `Attendance Code for ${subjectCode} ${yearSection}:
 ${qrData}`,
@@ -65,6 +81,12 @@ ${qrData}`,
       console.error('Error sharing attendance code:', error);
       Alert.alert('Error', 'Failed to share attendance code');
     }
+  };
+
+  // Handle modal close with proper refresh trigger
+  const handleClose = () => {
+    // We only want to call the original onClose function
+    onClose();
   };
 
   return (
@@ -87,7 +109,7 @@ ${qrData}`,
         visible={visible}
         transparent
         animationType="none"
-        onRequestClose={onClose}
+        onRequestClose={handleClose}
       >
         <View style={styles.modalOverlay}>
           <Animated.View 
@@ -99,7 +121,7 @@ ${qrData}`,
               <View style={styles.modalHandle} />
               <TouchableOpacity 
                 style={styles.closeButton}
-                onPress={onClose}
+                onPress={handleClose}
               >
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>

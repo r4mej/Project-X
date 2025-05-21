@@ -14,6 +14,24 @@ import { useRefresh } from '../context/RefreshContext';
 import { StudentBottomTabParamList, StudentDrawerParamList } from '../navigation/types';
 import { Attendance, attendanceAPI, classAPI, instructorDeviceAPI, studentAPI, userAPI } from '../services/api';
 
+// Student theme colors
+const STUDENT_COLORS = {
+  primary: '#dc2626',          // Main red
+  secondary: '#ef4444',        // Lighter red 
+  tertiary: '#b91c1c',         // Darker red
+  background: '#fef2f2',       // Very light red background
+  cardBackground: '#ffffff',   // White for cards
+  highlight: '#f87171',        // Highlight red
+  text: {
+    primary: '#991b1b',        // Dark red for main text
+    secondary: '#64748b',      // Gray for secondary text
+    light: '#ffffff'           // White text
+  },
+  border: '#fecaca',           // Light red border
+  success: '#4ade80',          // Success green
+  error: '#f87171'             // Error red
+};
+
 type NavigationProp = CompositeNavigationProp<
   DrawerNavigationProp<StudentDrawerParamList>,
   BottomTabNavigationProp<StudentBottomTabParamList>
@@ -48,7 +66,7 @@ const TabIcon = ({ name, focused, size = 24 }: TabIconProps) => {
         <Ionicons
           name={focused ? name : `${name}-outline` as keyof typeof Ionicons.glyphMap}
           size={size}
-          color={focused ? 'white' : 'rgba(255, 255, 255, 0.6)'}
+          color={focused ? STUDENT_COLORS.text.light : 'rgba(255, 255, 255, 0.6)'}
         />
       </Animated.View>
     </View>
@@ -652,7 +670,7 @@ const StudentDashboard: React.FC = () => {
             style={styles.refreshButton}
             onPress={() => {
               triggerRefresh();
-              Alert.alert("Refreshing", "Updating attendance data...");
+              Alert.alert("Refreshed", "Click OK...");
             }}
           >
             <Ionicons name="refresh" size={24} color="white" />
@@ -668,183 +686,153 @@ const StudentDashboard: React.FC = () => {
 
       <ScrollView style={styles.container}>
         <View style={styles.contentContainer}>
-          {/* Attendance Overview Card */}
+          {/* Quick Actions Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Attendance Overview</Text>
-            <Text style={styles.subTitle}>Your current attendance statistics</Text>
-            <View style={styles.attendanceCircle}>
-              <Text style={styles.attendancePercentage}>{attendanceStats.presentPercentage}%</Text>
-              <Text style={styles.attendanceLabel}>Overall</Text>
-            </View>
-            <View style={styles.semesterStats}>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Present</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progress, 
-                      { 
-                        width: `${(attendanceStats.present / attendanceStats.total) * 100}%`,
-                        backgroundColor: '#4CAF50'
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.statValue}>{attendanceStats.present}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Late</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progress, 
-                      { 
-                        width: `${(attendanceStats.late / attendanceStats.total) * 100}%`,
-                        backgroundColor: '#FF9800'
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.statValue}>{attendanceStats.late}</Text>
-              </View>
-              <View style={styles.statRow}>
-                <Text style={styles.statLabel}>Absent</Text>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progress, 
-                      { 
-                        width: `${(attendanceStats.absent / attendanceStats.total) * 100}%`,
-                        backgroundColor: '#F44336'
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.statValue}>{attendanceStats.absent}</Text>
-              </View>
+            <Text style={[styles.cardTitle, { color: STUDENT_COLORS.primary }]}>Quick Actions</Text>
+            <Text style={[styles.subTitle, { color: STUDENT_COLORS.text.secondary }]}>Access frequently used features</Text>
+            <View style={styles.actionButtonsRow}>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#fecaca', borderColor: STUDENT_COLORS.primary }]}
+                onPress={() => handleQuickAction('scan')}
+              >
+                <Ionicons name="qr-code" size={22} color={STUDENT_COLORS.primary} />
+                <Text style={[styles.actionText, { color: STUDENT_COLORS.primary }]}>Scan QR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#fecaca', borderColor: STUDENT_COLORS.primary }]}
+                onPress={() => handleQuickAction('schedule')}
+              >
+                <Ionicons name="calendar" size={22} color={STUDENT_COLORS.primary} />
+                <Text style={[styles.actionText, { color: STUDENT_COLORS.primary }]}>Schedule</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: '#fecaca', borderColor: STUDENT_COLORS.primary }]}
+                onPress={() => handleQuickAction('track')}
+                disabled={instructorList.length === 0}
+              >
+                <Ionicons name="location" size={22} color={instructorList.length === 0 ? '#ccc' : STUDENT_COLORS.primary} />
+                <Text style={[styles.actionText, { color: instructorList.length === 0 ? '#ccc' : STUDENT_COLORS.primary }]}>
+                  Track
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Quick Actions Card */}
+          {/* Attendance Overview */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Quick Actions</Text>
-            <Text style={styles.subTitle}>Access frequently used features</Text>
-            <View style={styles.actionButtonsRow}>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleQuickAction('scan')}
-              >
-                <Ionicons name="qr-code" size={22} color="#2eada6" />
-                <Text style={styles.actionText}>Scan QR</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleQuickAction('schedule')}
-              >
-                <Ionicons name="calendar" size={22} color="#2eada6" />
-                <Text style={styles.actionText}>Schedule</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionButton}
-                onPress={() => handleQuickAction('track')}
-              >
-                <Ionicons name="person" size={22} color="#2eada6" />
-                <Text style={styles.actionText}>Track Instructor</Text>
-              </TouchableOpacity>
+            <Text style={[styles.cardTitle, { color: STUDENT_COLORS.primary }]}>Attendance Overview</Text>
+            <Text style={[styles.subTitle, { color: STUDENT_COLORS.text.secondary }]}>Your semester attendance status</Text>
+            <View style={[styles.attendanceCircle, { borderColor: STUDENT_COLORS.primary }]}>
+              <Text style={[styles.attendancePercentage, { color: STUDENT_COLORS.primary }]}>
+                {attendanceStats.presentPercentage}%
+              </Text>
+              <Text style={[styles.attendanceLabel, { color: STUDENT_COLORS.text.secondary }]}>Attendance</Text>
+            </View>
+            
+            <View style={styles.semesterStats}>
+              <View style={styles.statRow}>
+                <Text style={[styles.statLabel, { color: STUDENT_COLORS.text.secondary }]}>Total Classes:</Text>
+                <Text style={[styles.statValue, { color: STUDENT_COLORS.text.primary }]}>{attendanceStats.total}</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={[styles.statLabel, { color: STUDENT_COLORS.text.secondary }]}>Present:</Text>
+                <Text style={[styles.statValue, { color: STUDENT_COLORS.success }]}>{attendanceStats.present}</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={[styles.statLabel, { color: STUDENT_COLORS.text.secondary }]}>Absent:</Text>
+                <Text style={[styles.statValue, { color: STUDENT_COLORS.error }]}>{attendanceStats.absent}</Text>
+              </View>
+              <View style={styles.statRow}>
+                <Text style={[styles.statLabel, { color: STUDENT_COLORS.text.secondary }]}>Late:</Text>
+                <Text style={[styles.statValue, { color: STUDENT_COLORS.tertiary }]}>{attendanceStats.late}</Text>
+              </View>
             </View>
           </View>
 
           {/* Today's Status Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Today's Status</Text>
-            <Text style={styles.subTitle}>Your attendance for today</Text>
-            <View style={styles.statusContainer}>
-              <View style={styles.statusIconContainer}>
-                <Ionicons 
-                  name={todayStatus === 'present' ? "checkmark-circle" : todayStatus === 'late' ? "time" : "close-circle"} 
-                  size={48} 
-                  color={getStatusColor(todayStatus)} 
-                />
+            <Text style={[styles.cardTitle, { color: STUDENT_COLORS.primary }]}>Today's Status</Text>
+            <Text style={[styles.subTitle, { color: STUDENT_COLORS.text.secondary }]}>Your attendance for today</Text>
+            <View style={styles.todayStatusContainer}>
+              <View style={[
+                styles.statusBadge,
+                { backgroundColor: getStatusColor(todayStatus) }
+              ]}>
+                <Text style={styles.statusText}>{todayStatus === 'not recorded' ? 'Not Recorded' : todayStatus}</Text>
               </View>
-              <Text style={[styles.statusText, { color: getStatusColor(todayStatus) }]}>
-                {todayStatus === 'not recorded' ? 'Not Recorded' : todayStatus.charAt(0).toUpperCase() + todayStatus.slice(1)}
-              </Text>
-              <Text style={styles.statusInfo}>
+              <Text style={[styles.statusInfo, { color: STUDENT_COLORS.text.secondary }]}>
                 {todayStatus === 'not recorded' 
-                  ? 'No attendance recorded for today yet.'
-                  : `You've been marked ${todayStatus} for today.`}
+                  ? 'No attendance has been recorded for today'
+                  : 'Your attendance has been recorded for today'
+                }
               </Text>
-              {recentSubject && todayStatus !== 'not recorded' && (
-                <View style={styles.recentSubjectInfo}>
-                  <Text style={styles.recentSubjectName}>{recentSubject.subjectCode}</Text>
-                  <Text style={styles.recentSubjectClass}>{recentSubject.className}</Text>
-                  <Text style={styles.recentSubjectTime}>
-                    {new Date(recentSubject.timestamp).toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                      hour12: true
-                    })}
-                  </Text>
-              </View>
-              )}
             </View>
           </View>
 
-          {/* Today's Schedule Card */}
+          {/* Today's Classes */}
           <View style={styles.card}>
-            <View style={styles.scheduleHeader}>
-              <View>
-                <Text style={styles.cardTitle}>Today's Schedule</Text>
-                <Text style={styles.subTitle}>Your classes for today</Text>
-              </View>
-              <View style={styles.currentDayBadge}>
+            <View style={styles.scheduleTitleRow}>
+              <Text style={[styles.cardTitle, { color: STUDENT_COLORS.primary }]}>Today's Classes</Text>
+              <View style={[styles.currentDayBadge, { backgroundColor: STUDENT_COLORS.primary }]}>
                 <Text style={styles.currentDayText}>
                   {new Date().toLocaleDateString('en-US', { weekday: 'short' })}
                 </Text>
               </View>
             </View>
-
+            <Text style={[styles.subTitle, { color: STUDENT_COLORS.text.secondary }]}>Your scheduled classes for today</Text>
+            
             {todayClasses.length > 0 ? (
-              todayClasses.map((classItem, index) => (
-                <View 
-                  key={classItem._id} 
-                  style={[
-                    styles.classItem,
-                    index !== todayClasses.length - 1 && styles.classItemBorder
-                  ]}
-                >
-                <View style={styles.classInfo}>
-                    <View style={styles.classHeader}>
-                      <Text style={styles.classCode}>{classItem.subjectCode}</Text>
-                      {classItem.schedules.some(isOngoing) && (
-                        <View style={[styles.statusBadge, { backgroundColor: '#4CAF50' }]}>
-                          <Text style={styles.statusBadgeText}>Ongoing</Text>
+              <View style={styles.todayClassesList}>
+                {todayClasses.map((classItem, index) => {
+                  const ongoingSchedule = classItem.schedules.find(schedule => isOngoing(schedule));
+                  const isCurrentlyOngoing = !!ongoingSchedule;
+                  
+                  return (
+                    <View 
+                      key={classItem._id} 
+                      style={[
+                        styles.classCard, 
+                        { 
+                          backgroundColor: isCurrentlyOngoing ? '#fee2e2' : STUDENT_COLORS.cardBackground,
+                          borderLeftColor: isCurrentlyOngoing ? STUDENT_COLORS.primary : STUDENT_COLORS.border
+                        }
+                      ]}
+                    >
+                      <Text style={[styles.subjectCode, { color: STUDENT_COLORS.primary }]}>
+                        {classItem.subjectCode}
+                      </Text>
+                      <Text style={[styles.todayClassName, { color: STUDENT_COLORS.text.primary }]}>{classItem.className}</Text>
+                      
+                      {classItem.schedules.map((schedule, idx) => (
+                        <Text key={idx} style={[styles.todayClassTime, { color: STUDENT_COLORS.text.secondary }]}>
+                          {schedule.startTime}{schedule.startPeriod} - {schedule.endTime}{schedule.endPeriod}
+                        </Text>
+                      ))}
+                      
+                      <View style={styles.todayClassDetails}>
+                        <View style={styles.todayDetailItem}>
+                          <Ionicons name="location-outline" size={16} color={STUDENT_COLORS.text.secondary} />
+                          <Text style={[styles.todayDetailText, { color: STUDENT_COLORS.text.secondary }]}>{classItem.room}</Text>
+                        </View>
+                        <View style={styles.todayDetailItem}>
+                          <Ionicons name="person-outline" size={16} color={STUDENT_COLORS.text.secondary} />
+                          <Text style={[styles.todayDetailText, { color: STUDENT_COLORS.text.secondary }]}>{classItem.instructor}</Text>
+                        </View>
+                      </View>
+                      
+                      {isCurrentlyOngoing && (
+                        <View style={[styles.statusBadge, { backgroundColor: STUDENT_COLORS.primary }]}>
+                          <Text style={styles.statusText}>Ongoing</Text>
                         </View>
                       )}
                     </View>
-                    <Text style={styles.className}>{classItem.className}</Text>
-                    {classItem.schedules.map((schedule, idx) => (
-                      <Text key={idx} style={styles.classTime}>
-                        {schedule.startTime} {schedule.startPeriod} - {schedule.endTime} {schedule.endPeriod}
-                      </Text>
-                    ))}
-                    <View style={styles.classDetails}>
-                      <View style={styles.detailItem}>
-                        <Ionicons name="person-outline" size={14} color="#666" />
-                        <Text style={styles.detailText}>{classItem.instructor}</Text>
-                      </View>
-                      <View style={styles.detailItem}>
-                        <Ionicons name="location-outline" size={14} color="#666" />
-                        <Text style={styles.detailText}>{classItem.room}</Text>
-                      </View>
-                    </View>
-                </View>
-                </View>
-              ))
+                  );
+                })}
+              </View>
             ) : (
               <View style={styles.noClassesContainer}>
-                <Ionicons name="calendar-outline" size={48} color="#666" />
-                <Text style={styles.noClassesText}>No classes scheduled for today</Text>
+                <Ionicons name="calendar-outline" size={48} color={STUDENT_COLORS.text.secondary} />
+                <Text style={[styles.noClassesText, { color: STUDENT_COLORS.text.secondary }]}>No classes scheduled for today</Text>
               </View>
             )}
           </View>
@@ -1030,13 +1018,13 @@ const StudentScreen: React.FC = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: STUDENT_COLORS.background }]}>
       <View style={{ flex: 1 }}>
         <Tab.Navigator
           screenOptions={{
             headerShown: false,
             tabBarStyle: {
-              backgroundColor: '#2eada6',
+              backgroundColor: STUDENT_COLORS.primary,
               borderTopWidth: 1,
               borderTopColor: 'rgba(255, 255, 255, 0.2)',
               height: 70,
@@ -1100,7 +1088,7 @@ const StudentScreen: React.FC = () => {
             left: 0,
             width: INDICATOR_WIDTH,
             height: 3,
-            backgroundColor: 'white',
+            backgroundColor: STUDENT_COLORS.text.light,
             borderRadius: 1.5,
             transform: [{ translateX: slideAnim }],
           }}
@@ -1115,18 +1103,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: STUDENT_COLORS.background,
   },
   safeArea: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: STUDENT_COLORS.primary,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: STUDENT_COLORS.background,
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: STUDENT_COLORS.primary,
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -1156,7 +1144,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: STUDENT_COLORS.text.light,
     textAlign: 'center',
     flex: 1,
   },
@@ -1164,7 +1152,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: STUDENT_COLORS.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1177,12 +1165,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
     marginBottom: 4,
   },
   subTitle: {
     fontSize: 12,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     marginBottom: 16,
   },
   attendanceCircle: {
@@ -1190,7 +1178,7 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 8,
-    borderColor: '#2eada6',
+    borderColor: STUDENT_COLORS.primary,
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1199,11 +1187,11 @@ const styles = StyleSheet.create({
   attendancePercentage: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
   },
   attendanceLabel: {
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
   },
   semesterStats: {
     marginTop: 16,
@@ -1216,12 +1204,12 @@ const styles = StyleSheet.create({
   statLabel: {
     flex: 2,
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
   },
   statValue: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
     textAlign: 'right',
   },
   progressBar: {
@@ -1250,7 +1238,7 @@ const styles = StyleSheet.create({
   },
   statusInfo: {
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     textAlign: 'center',
   },
   studentIdContainer: {
@@ -1281,7 +1269,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -1295,7 +1283,7 @@ const styles = StyleSheet.create({
   },
   noRecordsText: {
     textAlign: 'center',
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     fontSize: 14,
     marginTop: 16,
   },
@@ -1306,7 +1294,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   currentDayBadge: {
-    backgroundColor: '#2eada6',
+    backgroundColor: STUDENT_COLORS.primary,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -1335,16 +1323,16 @@ const styles = StyleSheet.create({
   classCode: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
   },
   className: {
     fontSize: 14,
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
     marginBottom: 4,
   },
   classTime: {
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     marginBottom: 8,
   },
   classDetails: {
@@ -1358,7 +1346,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
   },
   noClassesContainer: {
     alignItems: 'center',
@@ -1370,7 +1358,7 @@ const styles = StyleSheet.create({
   noClassesText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     textAlign: 'center',
   },
   recentSubjectInfo: {
@@ -1384,17 +1372,17 @@ const styles = StyleSheet.create({
   recentSubjectName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
     marginBottom: 4,
   },
   recentSubjectClass: {
     fontSize: 14,
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
     marginBottom: 4,
   },
   recentSubjectTime: {
     fontSize: 12,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -1409,7 +1397,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     backgroundColor: '#e8f5f4',
-    borderColor: '#2eada6',
+    borderColor: STUDENT_COLORS.primary,
     borderWidth: 1,
   },
   actionText: {
@@ -1417,7 +1405,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 8,
     textAlign: 'center',
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
   },
   modalOverlay: {
     flex: 1,
@@ -1441,16 +1429,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: STUDENT_COLORS.text.primary,
   },
   loadingText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
   },
   noInstructorsText: {
     textAlign: 'center',
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     fontSize: 14,
     marginTop: 16,
   },
@@ -1469,12 +1457,12 @@ const styles = StyleSheet.create({
   instructorName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
     marginLeft: 10,
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: STUDENT_COLORS.text.secondary,
     marginBottom: 15,
     textAlign: 'center',
     paddingHorizontal: 10,
@@ -1488,8 +1476,55 @@ const styles = StyleSheet.create({
   },
   lastTrackingText: {
     fontSize: 13,
-    color: '#2eada6',
+    color: STUDENT_COLORS.primary,
     textAlign: 'center',
+  },
+  todayStatusContainer: {
+    alignItems: 'center',
+    padding: 16,
+  },
+  scheduleTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  todayClassesList: {
+    flex: 1,
+  },
+  classCard: {
+    padding: 12,
+    borderLeftWidth: 4,
+    borderRadius: 8,
+  },
+  subjectCode: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: STUDENT_COLORS.primary,
+    marginBottom: 4,
+  },
+  todayClassName: {
+    fontSize: 14,
+    color: STUDENT_COLORS.text.primary,
+    marginBottom: 8,
+  },
+  todayClassTime: {
+    fontSize: 14,
+    color: STUDENT_COLORS.text.secondary,
+    marginBottom: 8,
+  },
+  todayClassDetails: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  todayDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  todayDetailText: {
+    fontSize: 12,
+    color: STUDENT_COLORS.text.secondary,
   },
 });
 

@@ -455,16 +455,21 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
       
       // Process attendance with enhanced data
       try {
+        // Create a properly formatted timestamp
+        const now = new Date();
+        const formattedTimestamp = now.toISOString();
+        
         // We've already checked that currentStudentId is not null earlier in the function
         // If we got here, it's safe to use as non-null
         const attendance = await attendanceAPI.submitAttendance({
           classId: qrData.classId,
           studentId: currentStudentId!, // Using non-null assertion as we've checked this already
           studentName,
-          timestamp: new Date().toISOString(),
+          timestamp: formattedTimestamp,
           status: 'present',
           recordedVia: 'qr',
-          location: locationData
+          location: locationData,
+          deviceInfo: Platform.OS + ' ' + Platform.Version
         });
         
         console.log('Attendance submitted successfully:', attendance);
@@ -872,7 +877,7 @@ const QRScanScreen: React.FC<QRScanScreenProps> = ({ visible, onClose }) => {
               <Text style={styles.notificationText}>Attendance recorded successfully!</Text>
               {confirmationSubject && (
                 <Text style={styles.notificationSubText}>
-                  Saved to database: {confirmationSubject || ''}{confirmationClass && confirmationClass !== 'Manual Entry' ? ` (${confirmationClass})` : ''}
+                  {confirmationSubject || ''}{confirmationClass && confirmationClass !== 'Manual Entry' ? ` (${confirmationClass})` : ''} - Saved to database
                 </Text>
               )}
             </View>
@@ -1052,11 +1057,12 @@ const styles = StyleSheet.create({
   },
   notificationContainer: {
     position: 'absolute',
-    bottom: 30,
+    top: 30,
     left: 20,
     right: 20,
     alignItems: 'center',
-    zIndex: 1000,
+    zIndex: 9999,
+    paddingTop: 20,
   },
   notificationContent: {
     borderRadius: 16,
@@ -1078,6 +1084,8 @@ const styles = StyleSheet.create({
   },
   successContent: {
     backgroundColor: '#4CAF50',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   errorContent: {
     backgroundColor: '#F44336',

@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { attendanceAPI, classAPI, reportAPI } from '../../services/api';
+import * as MediaLibrary from 'expo-media-library';
 
 interface RecordStats {
   totalRecords: number;
@@ -139,48 +140,163 @@ const RecordsOverview: React.FC = () => {
   const exportToCSV = async () => {
     try {
       setIsExporting(true);
+      
+      // Request permissions on Android
+      if (Platform.OS === 'android') {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') {
+          Alert.alert('Permission Denied', 'We need storage permission to save the exported file');
+          setIsExporting(false);
+          return;
+        }
+      }
 
-      // Create CSV header
-      const csvHeader = 'Date,Class Name,Subject Code,Total Students,Present,Absent,Attendance Rate\n';
+      // Create main summary CSV file
+      const summaryFileName = `attendance_summary_${new Date().toISOString().split('T')[0]}.csv`;
+      let csvHeader = 'Date,Class Name,Subject Code,Total Students,Present,Absent,Attendance Rate\n';
       
       // Create CSV rows from sorted records
-      const csvRows = stats.records.map(record => {
+      let csvRows = stats.records.map(record => {
         const date = new Date(record.date).toLocaleDateString();
         const attendanceRate = ((record.presentCount / record.totalStudents) * 100).toFixed(2);
         return `${date},"${record.className}","${record.subjectCode}",${record.totalStudents},${record.presentCount},${record.absentCount},${attendanceRate}%`;
       }).join('\n');
 
-      const csvContent = csvHeader + csvRows;
-      const fileName = `attendance_records_${new Date().toISOString().split('T')[0]}.csv`;
+      const summaryCsvContent = csvHeader + csvRows;
+      
+      // Create detailed CSV with student-level data
+      const detailedFileName = `attendance_detailed_${new Date().toISOString().split('T')[0]}.csv`;
+      csvHeader = 'Date,Class Name,Subject Code,Student ID,Student Name,Status\n';
+      
+      // Flatten the records to include individual student attendance
+      csvRows = stats.records.flatMap(record => {
+        const date = new Date(record.date).toLocaleDateString();
+        return record.students.map(student => {
+          return `${date},"${record.className}","${record.subjectCode}","${student.studentId}","${student.studentName}","${student.status}"`;
+        });
+      }).join('\n');
 
+      const detailedCsvContent = csvHeader + csvRows;
+      
+      // Handle different platforms
       if (Platform.OS === 'web') {
-        // For web platform
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = fileName;
-        link.click();
+        // For web platform - summary file
+        const summaryBlob = new Blob([summaryCsvContent], { type: 'text/csv;charset=utf-8;' });
+        const summaryLink = document.createElement('a');
+        summaryLink.href = URL.createObjectURL(summaryBlob);
+        summaryLink.download = summaryFileName;
+        summaryLink.click();
+        
+        // For web platform - detailed file
+        const detailedBlob = new Blob([detailedCsvContent], { type: 'text/csv;charset=utf-8;' });
+        const detailedLink = document.createElement('a');
+        detailedLink.href = URL.createObjectURL(detailedBlob);
+        detailedLink.download = detailedFileName;
+        detailedLink.click();
       } else {
         // For mobile platforms
-        const filePath = `${FileSystem.documentDirectory}${fileName}`;
-        await FileSystem.writeAsStringAsync(filePath, csvContent, {
+        const summaryFilePath = `${FileSystem.documentDirectory}${summaryFileName}`;
+        const detailedFilePath = `${FileSystem.documentDirectory}${detailedFileName}`;
+        
+        // Write files
+        await FileSystem.writeAsStringAsync(summaryFilePath, summaryCsvContent, {
+          encoding: FileSystem.EncodingType.UTF8
+        });
+        
+        await FileSystem.writeAsStringAsync(detailedFilePath, detailedCsvContent, {
           encoding: FileSystem.EncodingType.UTF8
         });
 
+        // For Android, save to MediaLibrary first to make files accessible by other apps
         if (Platform.OS === 'android') {
-          await Sharing.shareAsync(filePath, {
-            mimeType: 'text/csv',
-            dialogTitle: 'Export Attendance Records'
-          });
+          try {
+            // Save summary file to media library
+            const asset1 = await MediaLibrary.createAssetAsync(summaryFilePath);
+            await MediaLibrary.createAlbumAsync('Attendance Reports', asset1, false);
+            
+            // Save detailed file to media library
+            const asset2 = await MediaLibrary.createAssetAsync(detailedFilePath);
+            await MediaLibrary.createAlbumAsync('Attendance Reports', asset2, false);
+            
+            // Choose which file to share
+            Alert.alert(
+              'Export Options',
+              'Which report would you like to share?',
+              [
+                {
+                  text: 'Summary',
+                  onPress: async () => {
+                    await Sharing.shareAsync(summaryFilePath, {
+                      mimeType: 'text/csv',
+                      dialogTitle: 'Share Attendance Summary'
+                    });
+                  }
+                },
+                {
+                  text: 'Detailed',
+                  onPress: async () => {
+                    await Sharing.shareAsync(detailedFilePath, {
+                      mimeType: 'text/csv',
+                      dialogTitle: 'Share Detailed Attendance'
+                    });
+                  }
+                },
+                {
+                  text: 'Both',
+                  onPress: async () => {
+                    // On Android, we can only share one file at a time through the API
+                    // Tell the user files are saved and available in the gallery
+                    Alert.alert(
+                      'Files Saved',
+                      'Both files have been saved to your device in the "Attendance Reports" album.'
+                    );
+                  }
+                },
+                {
+                  text: 'Cancel',
+                  style: 'cancel'
+                }
+              ]
+            );
+          } catch (error) {
+            console.error('Error saving to media library:', error);
+            // Fallback to direct sharing
+            await Sharing.shareAsync(summaryFilePath, {
+              mimeType: 'text/csv',
+              dialogTitle: 'Share Attendance Records'
+            });
+          }
         } else {
-          await Sharing.shareAsync(filePath);
+          // For iOS, we can share multiple files
+          Alert.alert(
+            'Export Options',
+            'Which report would you like to share?',
+            [
+              {
+                text: 'Summary',
+                onPress: async () => {
+                  await Sharing.shareAsync(summaryFilePath);
+                }
+              },
+              {
+                text: 'Detailed',
+                onPress: async () => {
+                  await Sharing.shareAsync(detailedFilePath);
+                }
+              },
+              {
+                text: 'Cancel',
+                style: 'cancel'
+              }
+            ]
+          );
         }
       }
 
       Alert.alert('Success', 'Records exported successfully');
     } catch (error) {
       console.error('Error exporting records:', error);
-      Alert.alert('Error', 'Failed to export records');
+      Alert.alert('Error', 'Failed to export records: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsExporting(false);
     }
@@ -225,60 +341,6 @@ const RecordsOverview: React.FC = () => {
                 <Text style={styles.statLabel}>This Month</Text>
               </View>
             </View>
-          </View>
-
-          {/* Attendance Statistics Card */}
-          <View style={styles.card}>
-            <TouchableOpacity 
-              style={styles.cardHeader}
-              onPress={() => setIsAttendanceExpanded(!isAttendanceExpanded)}
-            >
-              <View>
-                <Text style={styles.cardTitle}>Attendance Statistics</Text>
-                <Text style={styles.subTitle}>Overall Attendance Rate</Text>
-              </View>
-              <Ionicons 
-                name={isAttendanceExpanded ? "chevron-up" : "chevron-down"} 
-                size={24} 
-                color="#2eada6" 
-              />
-            </TouchableOpacity>
-
-            <View style={styles.attendanceStats}>
-              <View style={[styles.statCircle, { borderColor: '#4CAF50' }]}>
-                <Text style={[styles.circleValue, { color: '#4CAF50' }]}>
-                  {calculatePercentage(stats.attendanceStats.present, stats.attendanceStats.total)}%
-                </Text>
-                <Text style={styles.circleLabel}>Present Rate</Text>
-              </View>
-              <View style={[styles.statCircle, { borderColor: '#F44336' }]}>
-                <Text style={[styles.circleValue, { color: '#F44336' }]}>
-                  {calculatePercentage(stats.attendanceStats.absent, stats.attendanceStats.total)}%
-                </Text>
-                <Text style={styles.circleLabel}>Absent Rate</Text>
-              </View>
-            </View>
-
-            {isAttendanceExpanded && (
-              <View style={styles.expandedStats}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Total Students:</Text>
-                  <Text style={styles.detailValue}>{stats.attendanceStats.total}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Present Rate:</Text>
-                  <Text style={[styles.detailValue, { color: '#4CAF50' }]}>
-                    {calculatePercentage(stats.attendanceStats.present, stats.attendanceStats.total)}%
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Absent Rate:</Text>
-                  <Text style={[styles.detailValue, { color: '#F44336' }]}>
-                    {calculatePercentage(stats.attendanceStats.absent, stats.attendanceStats.total)}%
-                  </Text>
-                </View>
-              </View>
-            )}
           </View>
 
           {/* Class Statistics Card */}
@@ -334,29 +396,30 @@ const RecordsOverview: React.FC = () => {
               </View>
             )}
           </View>
+          
+          {/* Export Button */}
+          <TouchableOpacity
+            style={styles.exportButtonContainer}
+            onPress={exportToCSV}
+            activeOpacity={0.8}
+            disabled={isExporting || stats.records.length === 0}
+          >
+            <View style={[
+              styles.exportButton, 
+              stats.records.length === 0 && styles.exportButtonDisabled
+            ]}>
+              {isExporting ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={22} color="white" />
+                  <Text style={styles.exportButtonText}>Export Records to CSV</Text>
+                </>
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-
-      {/* Export Button at Bottom */}
-      <View style={styles.exportContainer}>
-        <TouchableOpacity
-          style={[
-            styles.exportButton,
-            isExporting && styles.exportButtonDisabled
-          ]}
-          onPress={exportToCSV}
-          disabled={isExporting || stats.totalRecords === 0}
-        >
-          {isExporting ? (
-            <ActivityIndicator size="small" color="#2eada6" />
-          ) : (
-            <>
-              <Ionicons name="download-outline" size={24} color="#2eada6" />
-              <Text style={styles.exportButtonText}>Export Records to CSV</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
     </View>
   );
 };
@@ -503,40 +566,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  exportContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    paddingVertical: 12,
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  exportButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
     paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
+    paddingVertical: 10,
   },
   exportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#e8f5f4',
-    paddingVertical: 12,
+    backgroundColor: '#2eada6',
+    paddingVertical: 16,
+    paddingHorizontal: 30,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#2eada6',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    width: '100%',
   },
   exportButtonDisabled: {
-    opacity: 0.5,
+    backgroundColor: '#ccc',
+    elevation: 1,
+    shadowOpacity: 0.1,
   },
   exportButtonText: {
-    color: '#2eada6',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 10,
   },
 });
 

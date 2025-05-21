@@ -49,21 +49,31 @@ export const submitAttendance = async (req: Request, res: Response) => {
       });
     }
     
+    // Ensure we have a valid timestamp
+    const attendanceTimestamp = timestamp ? new Date(timestamp) : new Date();
+    if (isNaN(attendanceTimestamp.getTime())) {
+      console.error('Invalid timestamp provided:', timestamp);
+      return res.status(400).json({ message: 'Invalid timestamp format' });
+    }
+    
+    // Create a date-only value for the current day (no time component)
+    const today = new Date(attendanceTimestamp);
+    today.setHours(0, 0, 0, 0);
+    
+    console.log(`Checking for existing attendance record on ${today.toISOString()}`);
+    
     // Check for existing attendance within the same day
-    const today = new Date(timestamp || Date.now());
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
+    const startOfDay = new Date(today);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
     
     let attendance;
     try {
       attendance = await Attendance.findOne({
-      classId,
-      studentId,
-      timestamp: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
-    });
+        classId,
+        studentId,
+        date: startOfDay
+      });
     
       if (attendance) {
         // Store the previous status before updating
@@ -103,18 +113,19 @@ export const submitAttendance = async (req: Request, res: Response) => {
         
         console.log(`Attendance record updated successfully: ${attendance._id}`);
       } else {
-    // Create new attendance record
-      const attendanceData = {
-        classId,
-        studentId,
-        studentName,
-        timestamp: timestamp || new Date(),
-        status: status || 'present',
-        recordedVia: recordedVia || 'qr',
-        deviceInfo,
-        ipAddress,
-        location
-      };
+        // Create new attendance record
+        const attendanceData = {
+          classId,
+          studentId,
+          studentName,
+          timestamp: attendanceTimestamp,
+          date: startOfDay,
+          status: status || 'present',
+          recordedVia: recordedVia || 'qr',
+          deviceInfo,
+          ipAddress,
+          location
+        };
       
         console.log('Creating new attendance record with data:', JSON.stringify(attendanceData));
       
@@ -137,10 +148,7 @@ export const submitAttendance = async (req: Request, res: Response) => {
       // Get updated attendance stats for the class on this day
       const dayAttendance = await Attendance.find({
         classId,
-        timestamp: {
-          $gte: startOfDay,
-          $lte: endOfDay
-        }
+        date: startOfDay
       });
       
       const stats = {
@@ -183,13 +191,8 @@ export const getAttendanceByClass = async (req: Request, res: Response) => {
     // Filter by date if provided
     if (date) {
       const selectedDate = new Date(date as string);
-      const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
-      
-      query.timestamp = {
-        $gte: startOfDay,
-        $lte: endOfDay
-      };
+      selectedDate.setHours(0, 0, 0, 0);
+      query.date = selectedDate;
     }
     
     const attendance = await Attendance.find(query).sort({ timestamp: -1 });
@@ -276,9 +279,13 @@ export const getStudentAttendanceStatus = async (req: Request, res: Response) =>
     let queryDate: Date;
     
     if (date) {
-      queryDate = new Date(date as string);
+      const selectedDate = new Date(date as string);
+      selectedDate.setHours(0, 0, 0, 0);
+      queryDate = selectedDate;
     } else {
-      queryDate = new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      queryDate = today;
     }
     
     const startOfDay = new Date(queryDate.setHours(0, 0, 0, 0));
@@ -287,10 +294,7 @@ export const getStudentAttendanceStatus = async (req: Request, res: Response) =>
     const attendance = await Attendance.findOne({
       classId,
       studentId,
-      timestamp: {
-        $gte: startOfDay,
-        $lte: endOfDay
-      }
+      date: queryDate
     });
     
     if (!attendance) {
@@ -353,10 +357,7 @@ export const bulkUpdateAttendance = async (req: Request, res: Response) => {
         const existingRecord = await Attendance.findOne({
           classId,
           studentId,
-          timestamp: {
-            $gte: new Date(attendanceDate),
-            $lt: new Date(attendanceDate.getTime() + 24 * 60 * 60 * 1000)
-          }
+          date: attendanceDate
         });
         
         if (existingRecord) {
