@@ -197,7 +197,7 @@ const MyClasses: React.FC = () => {
           <View style={styles.contentContainer}>
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2eada6" />
+                <ActivityIndicator size="large" color="#dc2626" />
                 <Text style={styles.loadingText}>Loading classes...</Text>
               </View>
             ) : subjects.length === 0 ? (
@@ -217,7 +217,7 @@ const MyClasses: React.FC = () => {
                       key={subject._id}
                       style={[
                         styles.classCard,
-                        { backgroundColor: hasOngoingClass ? '#e8f5f4' : '#2eada6' }
+                        { backgroundColor: hasOngoingClass ? '#fef2f2' : '#dc2626' }
                       ]}
                       onPress={() => toggleCard(subject._id)}
                       activeOpacity={0.9}
@@ -244,7 +244,7 @@ const MyClasses: React.FC = () => {
                           </View>
                           {hasOngoingClass && (
                             <View style={[styles.ongoingBadge, { backgroundColor: '#fff' }]}>
-                              <Text style={[styles.ongoingText, { color: '#2eada6' }]}>Ongoing</Text>
+                              <Text style={[styles.ongoingText, { color: '#dc2626' }]}>Ongoing</Text>
                             </View>
                           )}
                         </View>
@@ -292,7 +292,7 @@ const MyClasses: React.FC = () => {
                           style={styles.viewStudentsButton}
                           onPress={() => handleViewStudents(subject)}
                         >
-                          <Ionicons name="people-outline" size={16} color="#2eada6" />
+                          <Ionicons name="people-outline" size={16} color="#dc2626" />
                           <Text style={styles.viewStudentsText}>View Class List</Text>
                         </TouchableOpacity>
                       </Animated.View>
@@ -320,14 +320,14 @@ const MyClasses: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: '#dc2626',
   },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#dc2626',
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   classCode: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#dc2626',
     marginBottom: 4,
   },
   className: {
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   ongoingBadge: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#dc2626',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   dayText: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    color: '#2eada6',
+    color: '#dc2626',
     fontSize: 12,
     fontWeight: '600',
     paddingHorizontal: 8,
@@ -487,22 +487,22 @@ const styles = StyleSheet.create({
   overviewTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#dc2626',
   },
   totalClassesCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#e8f5f4',
+    backgroundColor: '#fef2f2',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#2eada6',
+    borderColor: '#dc2626',
   },
   totalClassesNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#dc2626',
     marginBottom: 2,
   },
   totalClassesLabel: {
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   viewStudentsText: {
-    color: '#2eada6',
+    color: '#dc2626',
     fontWeight: '600',
     fontSize: 14,
   },

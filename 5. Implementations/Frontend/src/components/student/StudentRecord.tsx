@@ -173,7 +173,7 @@ const RecordsScreen: React.FC = () => {
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'present':
-        return '#4CAF50';
+        return '#dc2626'; // Changed to red to match the theme
       case 'absent':
         return '#FF6B6B';
       default:
@@ -208,12 +208,12 @@ const RecordsScreen: React.FC = () => {
           {/* Overview Cards */}
           <View style={styles.overviewContainer}>
             <View style={styles.overviewCard}>
-              <Ionicons name="book-outline" size={24} color="#2eada6" style={styles.overviewIcon} />
+              <Ionicons name="book-outline" size={24} color="#dc2626" style={styles.overviewIcon} />
               <Text style={styles.overviewLabel}>Total Classes</Text>
               <Text style={styles.overviewValue}>{stats.total}</Text>
             </View>
             <View style={styles.overviewCard}>
-              <Ionicons name="checkmark-circle-outline" size={24} color="#2eada6" style={styles.overviewIcon} />
+              <Ionicons name="checkmark-circle-outline" size={24} color="#dc2626" style={styles.overviewIcon} />
               <Text style={styles.overviewLabel}>Attendance Rate</Text>
               <Text style={styles.overviewValue}>
                 {Math.round(stats.present.percentage)}%
@@ -236,7 +236,7 @@ const RecordsScreen: React.FC = () => {
                       styles.progress, 
                       { 
                         width: `${stats.present.percentage}%`,
-                        backgroundColor: '#4CAF50'
+                        backgroundColor: '#dc2626'
                       }
                     ]} 
                   />
@@ -270,7 +270,7 @@ const RecordsScreen: React.FC = () => {
             
             {loading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2eada6" />
+                <ActivityIndicator size="large" color="#dc2626" />
                 <Text style={styles.loadingText}>Loading records...</Text>
               </View>
             ) : attendanceRecords.length === 0 ? (
@@ -335,14 +335,14 @@ const RecordsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#2eada6',
+    backgroundColor: '#dc2626',
   },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
   headerContainer: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#dc2626',
     padding: 20,
     paddingTop: 20,
     borderBottomWidth: 1,
@@ -506,14 +506,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   statusText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'capitalize',
+    letterSpacing: 0.5,
   },
   recordDetails: {
     flexDirection: 'row',

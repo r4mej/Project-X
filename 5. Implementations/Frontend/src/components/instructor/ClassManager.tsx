@@ -310,7 +310,7 @@ const AttendanceManager: React.FC = () => {
             setShowOptionsMenu(null);
           }}
         >
-          <Ionicons name="create-outline" size={20} color="#2eada6" />
+          <Ionicons name="create-outline" size={20} color="#3b82f6" />
           <Text style={styles.optionText}>Edit</Text>
         </TouchableOpacity>
         <TouchableOpacity 
@@ -348,7 +348,7 @@ const AttendanceManager: React.FC = () => {
                   <Ionicons 
                     name={isSelected ? "checkbox" : "square-outline"} 
                     size={24} 
-                    color={isSelected ? "#2eada6" : "#666"}
+                    color={isSelected ? "#3b82f6" : "#666"}
                   />
                 </View>
               )}
@@ -393,14 +393,14 @@ const AttendanceManager: React.FC = () => {
                   paddingVertical: 10,
                   alignItems: 'center',
                   borderWidth: 1,
-                  borderColor: '#2eada6',
+                  borderColor: '#3b82f6',
                 }}
                 onPress={(e) => {
                   e.stopPropagation && e.stopPropagation();
                   handleViewClass(item);
                 }}
               >
-                <Text style={{ color: '#2eada6', fontWeight: 'bold', fontSize: 16 }}>View Class</Text>
+                <Text style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: 16 }}>View Class</Text>
               </TouchableOpacity>
             </>
           )}
@@ -454,7 +454,7 @@ const AttendanceManager: React.FC = () => {
               <Ionicons
                 name={isAllSelected ? "checkbox" : "square-outline"}
                 size={24}
-                color="#2eada6"
+                color="#3b82f6"
               />
               <Text style={styles.selectAllText}>Select All</Text>
             </TouchableOpacity>
@@ -466,7 +466,7 @@ const AttendanceManager: React.FC = () => {
         </View>
 
         {loading ? (
-          <ActivityIndicator size="large" color="#2eada6" style={styles.loader} />
+          <ActivityIndicator size="large" color="#3b82f6" style={styles.loader} />
         ) : (
           <FlatList
             data={classes}
@@ -539,7 +539,7 @@ const AttendanceManager: React.FC = () => {
         <View style={styles.successModalContainer}>
           <View style={styles.successModalContent}>
             <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={50} color="#2eada6" />
+              <Ionicons name="checkmark-circle" size={50} color="#3b82f6" />
             </View>
             <Text style={styles.successModalTitle}>Class Added Successfully!</Text>
             <Text style={styles.successModalText}>{savedClassName} has been added to your class list.</Text>
@@ -757,10 +757,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
   },
   addButton: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     padding: 8,
     borderRadius: 8,
     width: 40,
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
     textAlign: 'center',
   },
   closeButton: {
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginTop: 10,
     marginBottom: 15,
   },
@@ -864,8 +864,8 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
   },
   dayButtonActive: {
-    backgroundColor: '#2eada6',
-    borderColor: '#2eada6',
+    backgroundColor: '#3b82f6',
+    borderColor: '#3b82f6',
   },
   dayButtonText: {
     fontSize: 14,
@@ -1071,7 +1071,7 @@ const styles = StyleSheet.create({
   scheduleDays: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginBottom: 4,
   },
   scheduleTime: {
@@ -1088,7 +1088,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   addScheduleButton: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
   successModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1177,10 +1177,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   selectAllText: {
-    color: '#2eada6',
+    color: '#3b82f6',
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',

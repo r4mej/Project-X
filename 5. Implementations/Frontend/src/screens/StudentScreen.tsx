@@ -561,7 +561,7 @@ const StudentDashboard: React.FC = () => {
     const normalizedStatus = status.toLowerCase();
     switch (normalizedStatus) {
       case 'present':
-        return '#4CAF50';
+        return STUDENT_COLORS.primary; // Use red theme for present
       case 'late':
         return '#FF9800';
       case 'absent':
@@ -650,7 +650,7 @@ const StudentDashboard: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2eada6" />
+        <ActivityIndicator size="large" color="#dc2626" />
       </View>
     );
   }
@@ -756,11 +756,18 @@ const StudentDashboard: React.FC = () => {
             <View style={styles.todayStatusContainer}>
               <View style={[
                 styles.statusBadge,
-                { backgroundColor: getStatusColor(todayStatus) }
+                { 
+                  backgroundColor: getStatusColor(todayStatus),
+                  transform: [{ scale: 1.1 }],
+                  marginBottom: 12
+                }
               ]}>
                 <Text style={styles.statusText}>{todayStatus === 'not recorded' ? 'Not Recorded' : todayStatus}</Text>
               </View>
-              <Text style={[styles.statusInfo, { color: STUDENT_COLORS.text.secondary }]}>
+              <Text style={[styles.statusInfo, { 
+                color: STUDENT_COLORS.text.secondary,
+                fontWeight: '500'
+              }]}>
                 {todayStatus === 'not recorded' 
                   ? 'No attendance has been recorded for today'
                   : 'Your attendance has been recorded for today'
@@ -870,7 +877,7 @@ const StudentDashboard: React.FC = () => {
             
             {isLoadingLocation ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#2eada6" />
+                <ActivityIndicator size="large" color="#dc2626" />
                 <Text style={styles.loadingText}>Getting instructor location...</Text>
               </View>
             ) : instructorList.length === 0 ? (
@@ -898,7 +905,7 @@ const StudentDashboard: React.FC = () => {
                     }}
                   >
                     <View style={styles.instructorInfo}>
-                      <Ionicons name="person" size={24} color="#2eada6" />
+                      <Ionicons name="person" size={24} color="#dc2626" />
                       <Text style={styles.instructorName}>{instructor.username}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={20} color="#666" />
@@ -1234,7 +1241,10 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 20,
     fontWeight: 'bold',
+    color: 'white',
+    textTransform: 'capitalize',
     marginBottom: 4,
+    textAlign: 'center',
   },
   statusInfo: {
     fontSize: 14,
@@ -1272,14 +1282,20 @@ const styles = StyleSheet.create({
     color: STUDENT_COLORS.text.primary,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   statusBadgeText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   noRecordsText: {
     textAlign: 'center',
@@ -1396,7 +1412,7 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
-    backgroundColor: '#e8f5f4',
+    backgroundColor: '#fef2f2',
     borderColor: STUDENT_COLORS.primary,
     borderWidth: 1,
   },
@@ -1481,7 +1497,13 @@ const styles = StyleSheet.create({
   },
   todayStatusContainer: {
     alignItems: 'center',
-    padding: 16,
+    padding: 24,
+    backgroundColor: '#fef2f2',
+    borderRadius: 16,
+    marginVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: STUDENT_COLORS.border,
   },
   scheduleTitleRow: {
     flexDirection: 'row',

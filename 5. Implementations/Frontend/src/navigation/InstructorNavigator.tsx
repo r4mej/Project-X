@@ -281,7 +281,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
           style={styles.drawerItem}
           onPress={() => setShowDevicesModal(true)}
         >
-          <Ionicons name="phone-portrait-outline" size={24} color="#2eada6" />
+          <Ionicons name="phone-portrait-outline" size={24} color="#3b82f6" />
           <Text style={styles.drawerItemText}>My Devices</Text>
         </TouchableOpacity>
         
@@ -290,7 +290,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
           style={styles.drawerItem}
           onPress={() => setShowNotificationsModal(true)}
         >
-          <Ionicons name="notifications-outline" size={24} color="#2eada6" />
+          <Ionicons name="notifications-outline" size={24} color="#3b82f6" />
           <Text style={styles.drawerItemText}>Notifications</Text>
           {getUnreadCount() > 0 && (
             <View style={styles.notificationBadge}>
@@ -304,7 +304,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
           style={styles.drawerItem}
           onPress={() => setShowChangePasswordModal(true)}
         >
-          <Ionicons name="lock-closed-outline" size={24} color="#2eada6" />
+          <Ionicons name="lock-closed-outline" size={24} color="#3b82f6" />
           <Text style={styles.drawerItemText}>Change Password</Text>
         </TouchableOpacity>
 
@@ -313,7 +313,7 @@ const CustomDrawerContent = ({ navigation }: any) => {
           style={styles.drawerItem}
           onPress={() => setShowAboutModal(true)}
         >
-          <Ionicons name="information-circle-outline" size={24} color="#2eada6" />
+          <Ionicons name="information-circle-outline" size={24} color="#3b82f6" />
           <Text style={styles.drawerItemText}>About App</Text>
         </TouchableOpacity>
 
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   drawerHeader: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     borderRadius: 12,
     padding: 4,
     borderWidth: 2,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
   drawerItemText: {
     marginLeft: 16,
     fontSize: 16,
-    color: '#2eada6',
+    color: '#3b82f6',
     fontWeight: '500',
   },
   logoutText: {

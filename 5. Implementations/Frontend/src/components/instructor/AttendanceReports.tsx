@@ -542,7 +542,7 @@ const Reports: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2eada6" />
+        <ActivityIndicator size="large" color="#3b82f6" />
       </View>
     );
   }
@@ -578,7 +578,7 @@ const Reports: React.FC = () => {
           <Ionicons 
             name={isOverviewExpanded ? "chevron-up" : "chevron-down"} 
             size={24} 
-            color="#2eada6" 
+            color="#3b82f6" 
           />
         </TouchableOpacity>
 
@@ -643,7 +643,7 @@ const Reports: React.FC = () => {
             <Ionicons 
               name={sortLatest ? "arrow-down" : "arrow-up"} 
               size={24} 
-              color="#2eada6" 
+              color="#3b82f6" 
             />
           </TouchableOpacity>
           <TouchableOpacity 
@@ -686,7 +686,7 @@ const Reports: React.FC = () => {
                       <Ionicons 
                         name={isSelected ? "checkbox" : "square-outline"} 
                         size={24} 
-                        color={isSelected ? "#2eada6" : "#666"}
+                        color={isSelected ? "#3b82f6" : "#666"}
                       />
                     </View>
                   )}
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2eada6',
+    color: '#3b82f6',
   },
   syncTime: {
     fontSize: 12,
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   refreshButton: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     padding: 8,
     borderRadius: 8,
     marginLeft: 10,
@@ -827,7 +827,7 @@ const styles = StyleSheet.create({
   sortButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   recordCard: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
   detailsTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginBottom: 4,
   },
   detailsDate: {
@@ -917,7 +917,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
   },
   statLabel: {
     fontSize: 14,
@@ -1062,7 +1062,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#9E9E9E',
   },
   confirmButton: {
-    backgroundColor: '#2eada6',
+    backgroundColor: '#3b82f6',
   },
   modalButtonText: {
     color: 'white',
@@ -1075,10 +1075,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   selectAllText: {
-    color: '#2eada6',
+    color: '#3b82f6',
     marginLeft: 8,
     fontSize: 16,
     fontWeight: '500',
@@ -1166,7 +1166,7 @@ const styles = StyleSheet.create({
   selectedCard: {
     backgroundColor: '#d4e9d7',
     borderWidth: 2,
-    borderColor: '#2eada6',
+    borderColor: '#3b82f6',
   },
   checkbox: {
     marginRight: 10,
@@ -1193,7 +1193,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginBottom: 5,
   },
   subTitle: {
@@ -1224,7 +1224,7 @@ const styles = StyleSheet.create({
   statPercentage: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#2eada6',
+    color: '#3b82f6',
     marginBottom: 2,
   },
   detailedStats: {
@@ -1251,7 +1251,7 @@ const styles = StyleSheet.create({
   headerButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: 'rgba(46, 173, 166, 0.1)',
+    backgroundColor: 'rgba(59, 130, 246, 0.1)',
   },
   statSubLabel: {
     fontSize: 12,
