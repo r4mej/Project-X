@@ -144,28 +144,51 @@ const ViewClass: React.FC = () => {
         return;
       }
       
-      // Add debug logging to identify request issues
-      console.log('Adding student with data:', {
-        classId,
-        studentId: newStudentId.trim(),
-        firstName: newFirstName.trim(),
-        lastName: newSurname.trim(),
-        middleInitial: newMiddleInitial?.trim() || undefined,
-        email: `${newStudentId.trim().toLowerCase()}@student.example.com`,
-        yearLevel: yearSection?.split('-')[0] || '1st Year',
-        course: subjectCode?.split(' ')[0] || 'BSIT'
-      });
-      
-      // Create a student object with proper handling of empty fields
+      // Create a student object with proper handling of empty fields - format specifically for backend
       const studentData = {
-        classId,
+        classId: classId,
         studentId: newStudentId.trim(),
         firstName: newFirstName.trim(),
         lastName: newSurname.trim(),
         email: `${newStudentId.trim().toLowerCase()}@student.example.com`,
-        yearLevel: yearSection?.split('-')[0] || '1st Year',
-        course: subjectCode?.split(' ')[0] || 'BSIT'
+        yearLevel: '1st Year',  // Default value
+        course: 'BSIT'  // Default value
       };
+      
+      // Double check required fields have values
+      if (!studentData.lastName || studentData.lastName === '') {
+        Alert.alert('Error', 'Last name is required');
+        return;
+      }
+      
+      if (!studentData.course || studentData.course === '') {
+        studentData.course = 'BSIT'; // Fallback to default if extraction fails
+      }
+      
+      if (!studentData.yearLevel || studentData.yearLevel === '') {
+        studentData.yearLevel = '1st Year'; // Ensure yearLevel is set
+      }
+      
+      // Extract yearLevel and course from class data if available
+      if (yearSection) {
+        // Extract year from 'BSCS 1-A' -> '1st Year'
+        const yearMatch = yearSection.match(/(\d+)/);
+        if (yearMatch && yearMatch[1]) {
+          const year = parseInt(yearMatch[1]);
+          if (year === 1) studentData.yearLevel = '1st Year';
+          else if (year === 2) studentData.yearLevel = '2nd Year';
+          else if (year === 3) studentData.yearLevel = '3rd Year';
+          else if (year === 4) studentData.yearLevel = '4th Year';
+        }
+      }
+      
+      // Extract course from subjectCode if available
+      if (subjectCode) {
+        const courseMatch = subjectCode.match(/([A-Z]+)/);
+        if (courseMatch && courseMatch[1]) {
+          studentData.course = courseMatch[1];
+        }
+      }
       
       // Only add middleInitial if it's not empty
       const middleI = newMiddleInitial?.trim();
@@ -173,8 +196,9 @@ const ViewClass: React.FC = () => {
         Object.assign(studentData, { middleInitial: middleI });
       }
       
+      console.log('Adding student with data:', JSON.stringify(studentData));
       const newStudent = await studentAPI.addStudent(studentData);
-
+      
       // Update the students list with the new student
       setStudents(prev => [...prev, newStudent]);
       

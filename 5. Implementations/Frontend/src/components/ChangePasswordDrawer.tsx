@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
 import { BlurView } from 'expo-blur';
 import React, { useState } from 'react';
 import {
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { API_URL } from '../config';
 import { useAuth } from '../context/AuthContext';
+import { authAPI } from '../services/api';
 
 interface ChangePasswordDrawerProps {
   visible: boolean;
@@ -43,6 +43,11 @@ const ChangePasswordDrawer: React.FC<ChangePasswordDrawerProps> = ({ visible, on
         return;
       }
 
+      if (!user?.userId) {
+        Alert.alert('Error', 'User ID not found. Please log in again.');
+        return;
+      }
+
       if (newPassword !== confirmPassword) {
         Alert.alert('Error', 'New passwords do not match');
         return;
@@ -58,13 +63,13 @@ const ChangePasswordDrawer: React.FC<ChangePasswordDrawerProps> = ({ visible, on
 
       setLoading(true);
 
-      const response = await axios.post(`${API_URL}/auth/change-password`, {
-        userId: user?.userId,
+      const response = await authAPI.changePassword({
+        userId: user.userId,
         currentPassword,
         newPassword,
       });
 
-      if (response.data.success) {
+      if (response.success) {
         Alert.alert('Success', 'Password changed successfully', [
           {
             text: 'OK',

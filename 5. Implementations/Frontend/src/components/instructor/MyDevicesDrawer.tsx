@@ -153,12 +153,12 @@ const MyDevicesDrawer: React.FC<MyDevicesDrawerProps> = ({ visible, onClose }) =
                   <View style={styles.deviceInfo}>
                     <Text style={styles.deviceName}>{item.deviceName}</Text>
                     <Text style={styles.deviceId}>ID: {item.deviceId.substring(0, 15)}...</Text>
-                    <Text style={styles.deviceDate}>Added: {formatDate(item.createdAt)}</Text>
+                    {/* <Text style={styles.deviceDate}>Added: {formatDate(item.createdAt)}</Text> */}
                     {item.lastLocation && (
                       <View style={styles.locationInfo}>
                         <Ionicons name="location" size={14} color="#2eada6" />
                         <Text style={styles.locationText}>
-                          Last updated: {formatDate(item.lastLocation.timestamp)}
+                          Last updated: {formatDate(item.createdAt)}
                         </Text>
                       </View>
                     )}

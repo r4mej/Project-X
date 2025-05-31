@@ -20,6 +20,7 @@ const Login: React.FC = () => {
   const { login, user } = useAuth();
   const iconRotation = new Animated.Value(0);
   const [isLoginSuccess, setIsLoginSuccess] = useState(false);
+  const [errorType, setErrorType] = useState<'wrong-credentials' | 'other' | null>(null);
   
   // For Project X text animation
   const textOpacity = useRef(new Animated.Value(0)).current;
@@ -127,6 +128,12 @@ const Login: React.FC = () => {
       await login(username, password);
       setIsLoginSuccess(true);
     } catch (err: any) {
+      // Check for 401 error (wrong credentials)
+      if (err?.response?.status === 401 || err?.message?.includes('Invalid credentials')) {
+        setErrorType('wrong-credentials');
+      } else {
+        setErrorType('other');
+      }
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
@@ -135,6 +142,7 @@ const Login: React.FC = () => {
 
   const closeErrorModal = () => {
     setShowErrorModal(false);
+    setErrorType(null);
   };
 
   const togglePasswordVisibility = () => {
@@ -229,7 +237,9 @@ const Login: React.FC = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Login Failed</Text>
-            <Text style={styles.modalMessage}>Please try again</Text>
+            <Text style={styles.modalMessage}>
+              {errorType === 'wrong-credentials' ? 'Wrong credentials. Please try again.' : 'Unable to login. Please try again.'}
+            </Text>
             <TouchableOpacity 
               style={styles.modalButton} 
               onPress={closeErrorModal}

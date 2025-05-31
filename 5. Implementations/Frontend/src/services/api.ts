@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { UserRole } from '../navigation/types';
 import { API_URL } from '../config';
 
-//const BASE_URL = 'https://triple-threat-plus-one.onrender.com/api';
+
 const BASE_URL = API_URL;
 
 // Helper function to store auth data
@@ -174,6 +174,17 @@ export const authAPI = {
       throw error;
     }
   },
+
+  changePassword: async (data: { userId: string, currentPassword: string, newPassword: string }) => {
+    try {
+      console.log('Changing password for user:', data.userId);
+      const response = await api.post('/auth/change-password', data);
+      return response.data;
+    } catch (error) {
+      console.error('Change password error:', error);
+      throw error;
+    }
+  },
 };
 
 interface CreateUserData {
@@ -314,8 +325,112 @@ export const studentAPI = {
     return res.data;
   },
   addStudent: async (student: Omit<Student, '_id' | 'attendanceStats'>) => {
-    const res = await api.post<Student>('/students', student);
-    return res.data;
+    console.log('Student data being sent to API:', JSON.stringify(student));
+    
+    // Ensure all required fields are present before sending
+    if (!student.lastName || !student.firstName || !student.studentId || !student.email || !student.yearLevel || !student.course || !student.classId) {
+      throw new Error('Missing required student fields');
+    }
+    
+    try {
+      // Get the token for authentication
+      const token = await AsyncStorage.getItem('token');
+      
+      // Force all fields to be strings to avoid any type issues
+      const payload: {
+        lastName: string;
+        firstName: string;
+        studentId: string;
+        email: string;
+        yearLevel: string;
+        course: string;
+        classId: string;
+        middleInitial?: string;
+      } = {
+        lastName: String(student.lastName),
+        firstName: String(student.firstName),
+        studentId: String(student.studentId),
+        email: String(student.email),
+        yearLevel: String(student.yearLevel),
+        course: String(student.course),
+        classId: String(student.classId)
+      };
+      
+      // Add middleInitial if present
+      if (student.middleInitial) {
+        payload.middleInitial = String(student.middleInitial);
+      }
+      
+      console.log('Formatted student data for API:', JSON.stringify(payload));
+      
+      // Try alternative approach with standard fetch API
+      const baseURL = api.defaults.baseURL || 'http://192.168.31.191:5000/api';
+      // Note: The endpoint may need to include the classId
+      const url = `${baseURL}/students`;
+      
+      console.log('Making direct fetch call to:', url);
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      // If the initial request fails, try a different endpoint structure
+      if (response.status === 400) {
+        console.log('First attempt failed, trying alternate endpoint format...');
+        
+        // Try with a different URL structure - some APIs expect classId in the URL
+        const altUrl = `${baseURL}/students/${payload.classId}`;
+        console.log('Making second attempt to:', altUrl);
+        
+        const secondResponse = await fetch(altUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        const secondData = await secondResponse.json();
+        
+        if (!secondResponse.ok) {
+          console.error('Second attempt failed with response:', secondData);
+          throw { 
+            response: { 
+              status: secondResponse.status,
+              data: secondData
+            } 
+          };
+        }
+        
+        console.log('Student added successfully on second attempt:', secondData);
+        return secondData;
+      }
+      
+      // Handle the response
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Server error response:', data);
+        throw { 
+          response: { 
+            status: response.status,
+            data: data
+          } 
+        };
+      }
+      
+      console.log('Student added successfully:', data);
+      return data;
+    } catch (error: any) {
+      console.error('Error response from addStudent API:', error.response?.data || error);
+      throw error;
+    }
   },
   updateStudent: async (id: string, student: Partial<Omit<Student, '_id'>>) => {
     const res = await api.put<Student>(`/students/${id}`, student);
@@ -387,6 +502,15 @@ export const attendanceAPI = {
       } catch (ipError) {
         console.error('Local IP connection failed:', ipError);
       }
+      try {
+        console.log('Testing connection to local IP...');
+        const ipResponse = await axios.get('http://192.168.163.207:5000/');
+        console.log('Local IP connection successful:', ipResponse.data);
+        api.defaults.baseURL = 'http://192.168.163.207:5000/api';
+        return true;
+      } catch (ipError) {
+        console.error('Local IP connection failed:', ipError);
+      }
 
       // Step 3: Try local development fallback
       try {
@@ -415,7 +539,7 @@ export const attendanceAPI = {
     }
   },
 
-  async submitAttendance(data: { 
+  async submitAttendance(data: {    
     classId: string; 
     studentId: string;
     studentName?: string;
